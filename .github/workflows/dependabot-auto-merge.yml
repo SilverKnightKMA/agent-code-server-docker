@@ -41,7 +41,7 @@ jobs:
           case "${UPDATE_TYPE}" in
             version-update:semver-patch|version-update:semver-minor)
               allow_automerge=true
-              reason="auto-merge enabled: ${UPDATE_TYPE}"
+              reason="auto-merge candidate: ${UPDATE_TYPE}"
               ;;
             version-update:semver-major)
               allow_automerge=false
@@ -58,12 +58,52 @@ jobs:
             echo "reason=${reason}"
           } >> "${GITHUB_OUTPUT}"
 
+      - name: Check changed files
+        id: files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          files_safe=true
+          protected_paths="managed-tools/manifest.json managed-tools/policy.json managed-tools/"
+
+          changed=$(gh pr view "${PR_NUMBER}" --json files --jq '.files[].path' 2>/dev/null || echo "")
+
+          if [ -z "${changed}" ]; then
+            echo "Warning: could not list changed files; assuming safe"
+            echo "files_safe=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          echo "Changed files:"
+          echo "${changed}"
+
+          while IFS= read -r filepath; do
+            for pattern in ${protected_paths}; do
+              case "${filepath}" in
+                ${pattern}*)
+                  echo "Protected file changed: ${filepath} (matches ${pattern})"
+                  files_safe=false
+                  ;;
+              esac
+            done
+          done <<< "${changed}"
+
+          if [ "${files_safe}" = "false" ]; then
+            echo "Managed-tools files changed; manual review required"
+          fi
+
+          echo "files_safe=${files_safe}" >> "${GITHUB_OUTPUT}"
+
       - name: Skip auto-merge
-        if: steps.policy.outputs.allow_automerge != 'true'
-        run: echo "Not enabling auto-merge: ${{ steps.policy.outputs.reason }}"
+        if: steps.policy.outputs.allow_automerge != 'true' || steps.files.outputs.files_safe != 'true'
+        run: |
+          echo "Not enabling auto-merge."
+          echo "Update-type allowed: ${{ steps.policy.outputs.allow_automerge }} (${{ steps.policy.outputs.reason }})"
+          echo "Changed-files safe: ${{ steps.files.outputs.files_safe }}"
 
       - name: Enable native GitHub auto-merge
-        if: steps.policy.outputs.allow_automerge == 'true'
+        if: steps.policy.outputs.allow_automerge == 'true' && steps.files.outputs.files_safe == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           PR_URL: ${{ github.event.pull_request.html_url }}

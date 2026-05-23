@@ -183,7 +183,7 @@ RUN mkdir -p \
 
 EXPOSE 8080
 
-USER root
+USER coder
 WORKDIR /home/coder
 
 ENTRYPOINT ["/usr/local/bin/code-server-omp-entrypoint"]

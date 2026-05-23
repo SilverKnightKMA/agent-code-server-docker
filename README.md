@@ -90,15 +90,25 @@ cp ~/.gitconfig ./data/config/git/config
 
 ### Docker-in-Docker
 
-Uncomment trong `docker-compose.yml`:
+Mặc định container chạy với `USER coder`. Nếu **không bật DinD**, không cần `user: root`.
+
+Chỉ khi bật DinD, uncomment đủ các dòng sau trong `docker-compose.yml`:
 ```yaml
 environment:
   ENABLE_DIND: "true"
+
+# service level:
+user: root
 privileged: true
+security_opt:
+  - no-new-privileges:false
+
 volumes:
   - ./data/docker:/var/lib/docker
   - ./data/containerd:/var/lib/containerd
 ```
+
+Luồng khi bật DinD: entrypoint chạy root → start `dockerd` → `fixuid`/drop về `coder` → chạy code-server.
 
 ### Auto-install managed tools khi start
 

@@ -17,7 +17,6 @@ services:
       # UI_PASSWORD: change-me
 
       # Docker-in-Docker. If enabled, also uncomment:
-      #   user: root
       #   privileged: true
       #   security_opt no-new-privileges:false
       #   /var/lib/docker and /var/lib/containerd volume mounts
@@ -54,7 +53,6 @@ services:
       # - ./data/containerd:/var/lib/containerd
 
     # Optional Docker-in-Docker runtime privileges. Uncomment only with ENABLE_DIND=true.
-    # user: root
     # privileged: true
     # security_opt:
     #   - no-new-privileges:false

@@ -57,11 +57,13 @@ jobs:
         run: |
           failures=0
           for cmd in code-server node npm bun omp docker dockerd gosu dumb-init git curl jq python3 pip; do
-            if docker run --rm --entrypoint bash code-server-omp:test -c "command -v ${cmd}" > /dev/null 2>&1; then
+            # bun is installed at /home/coder/.bun/bin/bun, not in root PATH
+            extra_path="/home/coder/.bun/bin"
+            if docker run --rm --entrypoint bash -e "PATH=${extra_path}:\${PATH}" code-server-omp:test -c "command -v ${cmd}" > /dev/null 2>&1; then
               echo "OK: ${cmd} found"
             else
               echo "FAIL: ${cmd} not found"
-              docker run --rm --entrypoint bash code-server-omp:test -c "command -v ${cmd} || echo '--- which:' && which ${cmd} 2>&1 || true" 2>&1 || true
+              docker run --rm --entrypoint bash -e "PATH=${extra_path}:\${PATH}" code-server-omp:test -c "command -v ${cmd} 2>&1; which ${cmd} 2>&1 || true; ls -la /home/coder/.bun/bin/${cmd} 2>/dev/null || true" 2>&1 || true
               failures=$((failures + 1))
             fi
           done
@@ -76,7 +78,7 @@ jobs:
           failures=0
           for cmd in code-server node npm bun omp docker dockerd git python3; do
             echo "=== ${cmd} --version ==="
-            version=$(docker run --rm --entrypoint bash code-server-omp:test -c "${cmd} --version 2>&1" || echo "VERSION CHECK FAILED")
+            version=$(docker run --rm --entrypoint bash -e "PATH=/home/coder/.bun/bin:${PATH}" code-server-omp:test -c "${cmd} --version 2>&1" || echo "VERSION CHECK FAILED")
             echo "${version}"
             if echo "${version}" | grep -q "VERSION CHECK FAILED"; then
               echo "FAIL: ${cmd} --version failed"

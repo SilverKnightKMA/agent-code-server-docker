@@ -319,6 +319,7 @@ async function updateReleaseFamilies(manifest) {
   const releaseFamilyNames = ["gh", "release_binaries", "llvm_tools", "cmake", "protobuf"];
   for (const familyName of releaseFamilyNames) {
     const family = manifest.families[familyName];
+    if (!family) continue;
     for (const tool of family.tools ?? []) {
       const release = await latestGithubRelease(family, tool);
       if (tool.name === "protobuf-compiler") {

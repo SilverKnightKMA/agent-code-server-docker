@@ -58,52 +58,117 @@ jobs:
             echo "reason=${reason}"
           } >> "${GITHUB_OUTPUT}"
 
-      - name: Check changed files
-        id: files
+      - name: Classify changed files and check applicable workflow runs
+        id: path_check
+        if: steps.policy.outputs.allow_automerge == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_OID: ${{ github.event.pull_request.head.sha }}
         run: |
-          files_safe=true
-          protected_paths="managed-tools/manifest.json managed-tools/policy.json managed-tools/"
-
+          echo "=== Changed files ==="
           changed=$(gh pr view "${PR_NUMBER}" --json files --jq '.files[].path' 2>/dev/null || echo "")
-
           if [ -z "${changed}" ]; then
-            echo "Could not list changed files; manual review required"
-            echo "files_safe=false" >> "${GITHUB_OUTPUT}"
+            echo "FAIL: could not list changed files"
+            echo "checks_ok=false" >> "$GITHUB_OUTPUT"
+            echo "failure_reason=Could not list changed files via API" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-
-          echo "Changed files:"
           echo "${changed}"
 
+          # Check managed-tools protected paths
+          files_safe=true
           while IFS= read -r filepath; do
-            for pattern in ${protected_paths}; do
-              case "${filepath}" in
-                ${pattern}*)
-                  echo "Protected file changed: ${filepath} (matches ${pattern})"
-                  files_safe=false
-                  ;;
-              esac
-            done
+            case "${filepath}" in
+              managed-tools/manifest.json|managed-tools/policy.json|managed-tools/*)
+                echo "Protected file changed: ${filepath}"
+                files_safe=false
+                ;;
+            esac
           done <<< "${changed}"
 
           if [ "${files_safe}" = "false" ]; then
             echo "Managed-tools files changed; manual review required"
+            echo "checks_ok=false" >> "$GITHUB_OUTPUT"
+            echo "failure_reason=Managed-tools files changed; manual review required" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
-          echo "files_safe=${files_safe}" >> "${GITHUB_OUTPUT}"
+          # Classify into path groups
+          touches_baked=false
+          touches_managed=false
+
+          while IFS= read -r filepath; do
+            case "${filepath}" in
+              Dockerfile*|scripts/*|bootstrap.sh|package.json|package-lock.json|bun.lock|go.mod|go.sum|tools.go|managed-tools/baked-tools.json|.github/workflows/baked-tools-check.yml|.github/workflows/baked-tools-monitor.yml)
+                touches_baked=true
+                ;;
+              managed-tools/manifest.json|managed-tools/policy.json|.github/workflows/managed-tools-check.yml|scripts/managed-*.mjs)
+                touches_managed=true
+                ;;
+            esac
+          done <<< "${changed}"
+
+          echo "touches_baked=${touches_baked}"
+          echo "touches_managed=${touches_managed}"
+
+          required_checks=""
+          if [ "${touches_baked}" = "true" ]; then
+            required_checks="${required_checks} Validate baked tools in image,Monitor baked tool versions,"
+          fi
+          if [ "${touches_managed}" = "true" ]; then
+            required_checks="${required_checks} Install & verify managed tools,"
+          fi
+
+          echo "required_checks=${required_checks}" >> "$GITHUB_OUTPUT"
+          echo "touches_baked=${touches_baked}" >> "$GITHUB_OUTPUT"
+          echo "touches_managed=${touches_managed}" >> "$GITHUB_OUTPUT"
+
+          if [ -z "${required_checks}" ]; then
+            echo "checks_ok=true" >> "$GITHUB_OUTPUT"
+            echo "failure_reason=" >> "$GITHUB_OUTPUT"
+            echo "No path-specific checks required (docs-only or other change)"
+            exit 0
+          fi
+
+          IFS=',' read -ra checks <<< "${required_checks}"
+          checks_ok=true
+          failure_reason=""
+
+          checks_json=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_OID}/check-runs" --jq '.check_runs' 2>/dev/null || echo "[]")
+
+          for check_name in "${checks[@]}"; do
+            check_name=$(echo "${check_name}" | xargs)
+            echo "Checking: ${check_name}"
+
+            conclusion=$(echo "${checks_json}" | jq -r --arg name "${check_name}" '.[] | select(.name == $name) | .conclusion // empty' | head -1)
+
+            if [ -z "${conclusion}" ]; then
+              echo "  MISSING: no check run found for '${check_name}'"
+              checks_ok=false
+              failure_reason="${failure_reason} Required path-specific check '${check_name}' not found;"
+            elif [ "${conclusion}" != "SUCCESS" ]; then
+              echo "  NOT SUCCESS: ${check_name} = ${conclusion}"
+              checks_ok=false
+              failure_reason="${failure_reason} Required path-specific check '${check_name}' is ${conclusion};"
+            else
+              echo "  OK: ${check_name} = SUCCESS"
+            fi
+          done
+
+          echo "checks_ok=${checks_ok}" >> "$GITHUB_OUTPUT"
+          echo "failure_reason=${failure_reason}" >> "$GITHUB_OUTPUT"
 
       - name: Skip auto-merge
-        if: steps.policy.outputs.allow_automerge != 'true' || steps.files.outputs.files_safe != 'true'
+        if: steps.policy.outputs.allow_automerge != 'true' || steps.path_check.outputs.checks_ok != 'true'
         run: |
           echo "Not enabling auto-merge."
           echo "Update-type allowed: ${{ steps.policy.outputs.allow_automerge }} (${{ steps.policy.outputs.reason }})"
-          echo "Changed-files safe: ${{ steps.files.outputs.files_safe }}"
+          echo "Path checks OK: ${{ steps.path_check.outputs.checks_ok }}"
+          echo "Failure reason: ${{ steps.path_check.outputs.failure_reason }}"
 
       - name: Enable native GitHub auto-merge
-        if: steps.policy.outputs.allow_automerge == 'true' && steps.files.outputs.files_safe == 'true'
+        if: steps.policy.outputs.allow_automerge == 'true' && steps.path_check.outputs.checks_ok == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           PR_URL: ${{ github.event.pull_request.html_url }}

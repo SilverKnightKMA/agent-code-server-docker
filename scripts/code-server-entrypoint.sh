@@ -35,11 +35,7 @@ do
 done
 export PATH
 
-# ── Run fixuid (maps container UID to host-mounted UID) ─────────────────────
-# This must happen early so sudo permissions work correctly.
-eval "$(fixuid -q)"
-
-# ── Optional: Docker-in-Docker ─────────────────────────────────────────────
+# ── Optional: Docker-in-Docker (must run as root, before fixuid) ───────────
 if [ "${ENABLE_DIND:-false}" = "true" ]; then
   if [ "$(id -u)" -ne 0 ]; then
     echo "[dind] ENABLE_DIND=true requires root entrypoint" >&2
@@ -54,7 +50,7 @@ if [ "${ENABLE_DIND:-false}" = "true" ]; then
   if ! docker info >/dev/null 2>&1; then
     echo "[dind] starting dockerd..."
     # shellcheck disable=SC2086
-    dockerd &
+    dockerd ${DOCKERD_ARGS:-} &
 
     tries=0
     until docker info >/dev/null 2>&1; do
@@ -70,6 +66,11 @@ if [ "${ENABLE_DIND:-false}" = "true" ]; then
     echo "[dind] docker daemon already reachable"
   fi
 fi
+
+# ── Run fixuid (maps container UID to host-mounted UID) ─────────────────────
+# This must happen early so sudo permissions work correctly.
+eval "$(fixuid -q)"
+
 
 # ── Optional: DOCKER_USER remapping ────────────────────────────────────────
 if [ "${DOCKER_USER-}" ]; then

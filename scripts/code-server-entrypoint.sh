@@ -50,12 +50,12 @@ if [ "${ENABLE_DIND:-false}" = "true" ]; then
 
   mkdir -p /var/lib/docker /var/lib/containerd /run /var/run
   chown -R root:root /var/lib/docker /var/lib/containerd
+  rm -f /var/run/docker.pid /var/run/docker/libnetwork/docker.pid 2>/dev/null
 
   export DOCKER_HOST="${DOCKER_HOST:-unix:///var/run/docker.sock}"
 
   if ! docker info >/dev/null 2>&1; then
     echo "[dind] starting dockerd..."
-    # shellcheck disable=SC2086
     dockerd ${DOCKERD_ARGS:-} &
 
     tries=0

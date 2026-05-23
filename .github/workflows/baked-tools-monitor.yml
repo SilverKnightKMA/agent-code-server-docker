@@ -158,7 +158,7 @@ jobs:
 
           # docker/dockerd — via docker base image tag (same version)
           upstream_check "docker" "29.5.2" \
-            'curl -fsSL "https://registry.hub.docker.com/v2/repositories/library/docker/tags?page_size=2&ordering=last_updated" 2>/dev/null | jq -r "[.results[] | select(.name | startswith(\"29\")) | select(.name | endswith(\"-dind\") and (endswith(\"-dind-rootless\") | not))][0] // .results[0].name | sub(\"-dind$\"; \"\")" 2>/dev/null' \
+            'curl -fsSL "https://registry.hub.docker.com/v2/repositories/library/docker/tags?page_size=5&ordering=last_updated" 2>/dev/null | jq -r "[.results[] | select(.name | endswith(\"-dind\")) | select(.name | endswith(\"-dind-rootless\") | not)][0] | .name // .results[0].name | sub(\"-dind$\"; \"\")" 2>/dev/null' \
             'cat'
 
           echo "---"

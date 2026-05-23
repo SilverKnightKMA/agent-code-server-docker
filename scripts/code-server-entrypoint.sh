@@ -85,6 +85,22 @@ if [ "${DOCKER_USER-}" ] && [ "$(id -u)" -eq 0 ]; then
     usermod --login "$DOCKER_USER" coder
     groupmod -n "$DOCKER_USER" coder
   fi
+  fi
+
+
+# ── Ensure home directory ownership ────────────────────────────────────
+# Mounted volumes may have host UID/GID; fixuid handles top-level home,
+# but subdirs like .config/code-server need to exist and be writable.
+RUN_USER="${USER:-coder}"
+RUN_HOME="$(getent passwd "${RUN_USER}" 2>/dev/null | cut -d: -f6 || echo /home/coder)"
+
+if [ "$(id -u)" -eq 0 ]; then
+  mkdir -p "${RUN_HOME}/.config/code-server" \
+           "${RUN_HOME}/.local/share/code-server" \
+           "${RUN_HOME}/.cache/code-server" 2>/dev/null
+  chown -R "${RUN_USER}:${RUN_USER}" "${RUN_HOME}/.config" \
+           "${RUN_HOME}/.local" \
+           "${RUN_HOME}/.cache" 2>/dev/null
 fi
 
 # ── Optional: managed tools autoinstall ────────────────────────────────────

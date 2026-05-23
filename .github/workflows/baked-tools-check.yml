@@ -6,7 +6,10 @@ on:
       - main
     paths:
       - Dockerfile.dockerfile
+      - Dockerfile*
       - scripts/code-server-entrypoint.sh
+      - managed-tools/baked-tools.json
+      - bootstrap.sh
       - package.json
       - package-lock.json
       - go.mod
@@ -18,7 +21,10 @@ on:
       - main
     paths:
       - Dockerfile.dockerfile
+      - Dockerfile*
       - scripts/code-server-entrypoint.sh
+      - managed-tools/baked-tools.json
+      - bootstrap.sh
       - package.json
       - package-lock.json
       - go.mod

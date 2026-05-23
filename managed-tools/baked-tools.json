@@ -1,0 +1,198 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "comment": "Inventory of baked-in tools in the code-server-omp Docker image. Every tool must have a monitor type.",
+  "tools": [
+    {
+      "name": "code-server",
+      "currentVersion": "4.99.3",
+      "versionCommand": "code-server --version",
+      "versionPattern": "^[0-9]+\\.[0-9]+\\.[0-9]+",
+      "installedPath": "/usr/bin/code-server",
+      "sourceType": "github-release",
+      "sourceUrl": "https://github.com/coder/code-server/releases/tag/v4.99.3",
+      "sourceDetail": "COPY from code-server-builder stage (ARG CODE_SERVER_VERSION=4.99.3, deb install)",
+      "monitorType": "dependabot",
+      "dependabotEcosystem": "docker",
+      "updateImpact": "rebuild-image-required",
+      "triggerPaths": [
+        "Dockerfile.dockerfile"
+      ]
+    },
+    {
+      "name": "node",
+      "currentVersion": "v24.16.0",
+      "versionCommand": "node --version",
+      "versionPattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+",
+      "installedPath": "/usr/local/bin/node",
+      "sourceType": "script",
+      "sourceUrl": "https://nodejs.org/dist/v24.16.0/node-v24.16.0-linux-x64.tar.xz",
+      "sourceDetail": "Direct curl + tar extract in Dockerfile (pinned to same version as Bun's Node)",
+      "monitorType": "dependabot",
+      "dependabotEcosystem": "docker",
+      "updateImpact": "rebuild-image-required",
+      "triggerPaths": [
+        "Dockerfile.dockerfile"
+      ]
+    },
+    {
+      "name": "npm",
+      "currentVersion": "bundled-with-node-v24.16.0",
+      "versionCommand": "npm --version",
+      "versionPattern": "^[0-9]+\\.[0-9]+\\.[0-9]+",
+      "installedPath": "/usr/local/bin/npm",
+      "sourceType": "script",
+      "sourceDetail": "Bundled with Node.js tarball from nodejs.org",
+      "monitorType": "intentionally-unpinned",
+      "intentionalRationale": "npm version is determined by the Node.js release (shipped together in the tarball). Pinning Node pins npm implicitly.",
+      "updateImpact": "rebuild-image-required"
+    },
+    {
+      "name": "bun",
+      "currentVersion": "1.3.14",
+      "versionCommand": "bun --version",
+      "versionPattern": "^[0-9]+\\.[0-9]+\\.[0-9]+",
+      "installedPath": "/usr/local/bin/bun",
+      "sourceType": "base-image",
+      "sourceUrl": "https://hub.docker.com/r/oven/bun/tags",
+      "sourceDetail": "COPY from oven/bun:1.3.14@sha256:e10577f0db68676a7024391c6e5cb4b879ebd17188ab750cf10024a6d700e5c4 AS omp-builder",
+      "monitorType": "dependabot",
+      "dependabotEcosystem": "docker",
+      "updateImpact": "rebuild-image-required",
+      "triggerPaths": [
+        "Dockerfile.dockerfile"
+      ]
+    },
+    {
+      "name": "omp",
+      "currentVersion": "15.2.4",
+      "versionCommand": "omp --version",
+      "versionPattern": "^omp/[0-9]+\\.[0-9]+\\.[0-9]+",
+      "installedPath": "/usr/local/bin/omp",
+      "sourceType": "npm",
+      "sourceUrl": "https://www.npmjs.com/package/@oh-my-pi/pi-coding-agent",
+      "sourceDetail": "bun install -g @oh-my-pi/pi-coding-agent@15.2.4 in omp-builder stage",
+      "monitorType": "dependabot",
+      "dependabotEcosystem": "docker",
+      "updateImpact": "rebuild-image-required",
+      "triggerPaths": [
+        "Dockerfile.dockerfile"
+      ]
+    },
+    {
+      "name": "docker",
+      "currentVersion": "29.5.2",
+      "versionCommand": "docker --version",
+      "versionPattern": "^Docker version [0-9]+\\.[0-9]+\\.[0-9]+",
+      "installedPath": "/usr/local/bin/docker",
+      "sourceType": "base-image",
+      "sourceUrl": "https://hub.docker.com/_/docker/tags",
+      "sourceDetail": "COPY --from=docker-dind (docker:29.5.2-dind stage) all binaries",
+      "monitorType": "dependabot",
+      "dependabotEcosystem": "docker",
+      "updateImpact": "rebuild-image-required",
+      "triggerPaths": [
+        "Dockerfile.dockerfile"
+      ]
+    },
+    {
+      "name": "dockerd",
+      "currentVersion": "29.5.2",
+      "versionCommand": "dockerd --version",
+      "versionPattern": "^dockerd [0-9]+\\.[0-9]+\\.[0-9]+",
+      "installedPath": "/usr/local/bin/dockerd",
+      "sourceType": "base-image",
+      "sourceUrl": "https://hub.docker.com/_/docker/tags",
+      "sourceDetail": "COPY --from=docker-dind (docker:29.5.2-dind stage) all daemon binaries and CLI plugins",
+      "monitorType": "dependabot",
+      "dependabotEcosystem": "docker",
+      "updateImpact": "rebuild-image-required",
+      "triggerPaths": [
+        "Dockerfile.dockerfile"
+      ]
+    },
+    {
+      "name": "gosu",
+      "currentVersion": "apt-stable",
+      "versionCommand": "gosu --version",
+      "versionPattern": ".*",
+      "installedPath": "/usr/sbin/gosu",
+      "sourceType": "apt",
+      "sourceDetail": "apt-get install gosu (debian:13-slim package, not version-pinned)",
+      "monitorType": "intentionally-unpinned",
+      "intentionalRationale": "gosu comes from Debian stable apt repository. It is a simple su-exec-like tool with no significant breaking changes. Pinning would require manual updates for no benefit. Debian security team handles CVE patches.",
+      "updateImpact": "rebuild-image-required"
+    },
+    {
+      "name": "dumb-init",
+      "currentVersion": "apt-stable",
+      "versionCommand": "dumb-init --version 2>&1 || dumb-init --help 2>&1 | head -1",
+      "versionPattern": ".*",
+      "installedPath": "/usr/bin/dumb-init",
+      "sourceType": "apt",
+      "sourceDetail": "apt-get install dumb-init (debian:13-slim package, not version-pinned)",
+      "monitorType": "intentionally-unpinned",
+      "intentionalRationale": "dumb-init comes from Debian stable apt repository. It is a minimal init wrapper with no significant version churn. Debian security team handles CVE patches.",
+      "updateImpact": "rebuild-image-required"
+    },
+    {
+      "name": "git",
+      "currentVersion": "apt-stable",
+      "versionCommand": "git --version",
+      "versionPattern": "^git version [0-9]+\\.[0-9]+\\.[0-9]+",
+      "installedPath": "/usr/bin/git",
+      "sourceType": "apt",
+      "sourceDetail": "apt-get install git git-lfs (debian:13-slim package, not version-pinned)",
+      "monitorType": "intentionally-unpinned",
+      "intentionalRationale": "Git comes from Debian stable apt repository. Debian security team backports critical patches to the stable release. Pinning a specific git version would not meaningfully improve security or reliability.",
+      "updateImpact": "rebuild-image-required"
+    },
+    {
+      "name": "curl",
+      "currentVersion": "apt-stable",
+      "versionCommand": "curl --version",
+      "versionPattern": "^curl [0-9]+\\.[0-9]+\\.[0-9]+",
+      "installedPath": "/usr/bin/curl",
+      "sourceType": "apt",
+      "sourceDetail": "apt-get install curl (debian:13-slim package, not version-pinned)",
+      "monitorType": "intentionally-unpinned",
+      "intentionalRationale": "curl comes from Debian stable apt repository. Debian security team backports critical patches. Frequently used as a foundational tool in Dockerfiles, not a risk vector on its own.",
+      "updateImpact": "rebuild-image-required"
+    },
+    {
+      "name": "jq",
+      "currentVersion": "apt-stable",
+      "versionCommand": "jq --version",
+      "versionPattern": "^jq-[0-9]+\\.[0-9]+",
+      "installedPath": "/usr/bin/jq",
+      "sourceType": "apt",
+      "sourceDetail": "apt-get install jq (debian:13-slim package, not version-pinned)",
+      "monitorType": "intentionally-unpinned",
+      "intentionalRationale": "jq comes from Debian stable apt repository. No breaking changes in minor versions; Debian security team backports patches.",
+      "updateImpact": "rebuild-image-required"
+    },
+    {
+      "name": "python3",
+      "currentVersion": "apt-stable",
+      "versionCommand": "python3 --version",
+      "versionPattern": "^Python [0-9]+\\.[0-9]+\\.[0-9]+",
+      "installedPath": "/usr/bin/python3",
+      "sourceType": "apt",
+      "sourceDetail": "apt-get install python3 python3-pip python3-venv (debian:13-slim package, not version-pinned)",
+      "monitorType": "intentionally-unpinned",
+      "intentionalRationale": "Python3 comes from Debian stable apt repository. Debian security team backports patches. Version is tied to Debian release cycle; pinning would require custom backporting with no security benefit.",
+      "updateImpact": "rebuild-image-required"
+    },
+    {
+      "name": "pip",
+      "currentVersion": "apt-stable",
+      "versionCommand": "pip --version",
+      "versionPattern": "^pip [0-9]+\\.[0-9]+\\.[0-9]+",
+      "installedPath": "/usr/local/bin/pip",
+      "sourceType": "apt",
+      "sourceDetail": "apt-get install python3-pip (debian:13-slim package, not version-pinned; symlinked to /usr/local/bin/pip)",
+      "monitorType": "intentionally-unpinned",
+      "intentionalRationale": "pip comes from Debian stable apt repository via python3-pip. Same rationale as python3: tied to Debian release, security patches backported by the Debian security team.",
+      "updateImpact": "rebuild-image-required"
+    }
+  ]
+}

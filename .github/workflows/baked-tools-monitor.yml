@@ -1,0 +1,263 @@
+name: Baked Tools Monitor
+
+on:
+  schedule:
+    # Weekly check for upstream version drift on monitored baked tools
+    - cron: '0 10 * * 1'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - managed-tools/baked-tools.json
+      - Dockerfile.dockerfile
+      - scripts/code-server-entrypoint.sh
+      - .github/workflows/baked-tools-monitor.yml
+  push:
+    branches:
+      - main
+    paths:
+      - managed-tools/baked-tools.json
+      - Dockerfile.dockerfile
+      - scripts/code-server-entrypoint.sh
+      - .github/workflows/baked-tools-monitor.yml
+
+jobs:
+  monitor:
+    name: Monitor baked tool versions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Validate baked-tools.json
+        id: validate
+        run: |
+          echo "=== Validate baked-tools.json ==="
+          failures=0
+
+          if ! jq empty managed-tools/baked-tools.json 2>/dev/null; then
+            echo "FAIL: managed-tools/baked-tools.json is not valid JSON"
+            exit 1
+          fi
+
+          tools=$(jq -r '.tools[] | .name' managed-tools/baked-tools.json)
+          tool_count=$(echo "${tools}" | wc -l)
+          echo "Found ${tool_count} baked tools in inventory"
+
+          # Verify each tool has required fields
+          while IFS= read -r name; do
+            monitor=$(jq -r --arg n "${name}" '.tools[] | select(.name == $n) | .monitorType' managed-tools/baked-tools.json)
+            impact=$(jq -r --arg n "${name}" '.tools[] | select(.name == $n) | .updateImpact' managed-tools/baked-tools.json)
+
+            if [ -z "${monitor}" ] || [ "${monitor}" = "null" ]; then
+              echo "FAIL: tool '${name}' has no monitorType"
+              failures=$((failures + 1))
+              continue
+            fi
+
+            # Validate monitor type
+            case "${monitor}" in
+              dependabot)
+                dep_eco=$(jq -r --arg n "${name}" '.tools[] | select(.name == $n) | .dependabotEcosystem // "missing"' managed-tools/baked-tools.json)
+                if [ "${dep_eco}" = "missing" ] || [ -z "${dep_eco}" ]; then
+                  echo "FAIL: tool '${name}' has monitor=dependabot but no dependabotEcosystem field"
+                  failures=$((failures + 1))
+                else
+                  # Check that the ecosystem exists in .github/dependabot.yml
+                  if grep -q "^  - package-ecosystem: \"${dep_eco}\"" .github/dependabot.yml 2>/dev/null; then
+                    echo "OK: ${name} -> dependabot ecosystem=${dep_eco} (present in dependabot.yml)"
+                  else
+                    echo "FAIL: tool '${name}' dependabotEcosystem=${dep_eco} not found in .github/dependabot.yml"
+                    failures=$((failures + 1))
+                  fi
+                fi
+                ;;
+              baked-tools-monitor)
+                echo "OK: ${name} -> monitor=baked-tools-monitor (upstream check handled below)"
+                ;;
+              intentionally-unpinned)
+                rationale=$(jq -r --arg n "${name}" '.tools[] | select(.name == $n) | .intentionalRationale // "none"' managed-tools/baked-tools.json)
+                echo "OK: ${name} -> monitor=intentionally-unpinned (${rationale})"
+                ;;
+              *)
+                echo "FAIL: tool '${name}' has unknown monitorType='${monitor}'"
+                failures=$((failures + 1))
+                ;;
+            esac
+
+            # Validate update impact
+            if [ "${impact}" != "rebuild-image-required" ]; then
+              echo "FAIL: tool '${name}' has invalid updateImpact='${impact}' (expected rebuild-image-required)"
+              failures=$((failures + 1))
+            fi
+
+            # Check for unresolved placeholders
+            url=$(jq -r --arg n "${name}" '.tools[] | select(.name == $n) | .sourceUrl // ""' managed-tools/baked-tools.json)
+            if echo "${url}" | grep -qE '\{[a-zA-Z_][a-zA-Z0-9_]*\}'; then
+              echo "FAIL: tool '${name}' has unresolved template variables in sourceUrl: ${url}"
+              failures=$((failures + 1))
+            fi
+          done <<< "${tools}"
+
+          echo "failures=${failures}" >> "${GITHUB_OUTPUT}"
+          if [ "${failures}" -gt 0 ]; then
+            exit 1
+          fi
+          echo "OK: baked-tools.json validated successfully"
+
+      - name: Check upstream versions
+        id: upstream_checks
+        # Intentionally-unpinned tools are excluded — they come from
+        # Debian stable and are not version-pinned. Dependabot-covered
+        # tools (docker ecosystem) are handled by Dependabot PRs.
+        # This step checks tools where upstream version info is available.
+        run: |
+          echo "=== Upstream version checks ==="
+          results_file=$(mktemp)
+          failures=0
+
+          upstream_check() {
+            local name="$1"
+            local current="$2"
+            local check_cmd="$3"
+            local version_cmd="$4"
+
+            echo "--- ${name} ---"
+            echo "  current: ${current}"
+            upstream=$(eval "${check_cmd}" 2>&1) || {
+              echo "  UPSTREAM_CHECK_FAILED: ${upstream}"
+              echo "${name}|${current}|CHECK_FAILED|${upstream}" >> "${results_file}"
+              failures=$((failures + 1))
+              return 1
+            }
+            # Strip prefix if version_cmd is given
+            if [ -n "${version_cmd}" ]; then
+              parsed=$(echo "${upstream}" | eval "${version_cmd}" 2>/dev/null) || parsed="${upstream}"
+            else
+              parsed="${upstream}"
+            fi
+            echo "  latest: ${parsed}"
+            echo "${name}|${current}|${parsed}||" >> "${results_file}"
+          }
+
+          # code-server — pinned in Dockerfile via ARG
+          upstream_check "code-server" "4.99.3" \
+            'curl -fsSL https://api.github.com/repos/coder/code-server/releases/latest 2>/dev/null | jq -r ".tag_name | sub(\"^v\"; \"\")" 2>/dev/null' \
+            'cat'
+
+          # bun — pinned via base image tag
+          upstream_check "bun" "1.3.14" \
+            'curl -fsSL "https://registry.npmjs.org/bun/latest" 2>/dev/null | jq -r ".version" 2>/dev/null' \
+            'cat'
+
+          # omp — pinned via bun install -g @oh-my-pi/pi-coding-agent@version
+          upstream_check "omp" "15.2.4" \
+            'curl -fsSL "https://registry.npmjs.org/@oh-my-pi/pi-coding-agent/latest" 2>/dev/null | jq -r ".version" 2>/dev/null' \
+            'cat'
+
+          # docker/dockerd — via docker base image tag (same version)
+          upstream_check "docker" "29.5.2" \
+            'curl -fsSL "https://registry.hub.docker.com/v2/repositories/library/docker/tags?page_size=1&ordering=last_updated&name=-dind" 2>/dev/null | jq -r ".results[0].name | sub(\"-dind$\"; \"\")" 2>/dev/null' \
+            'cat'
+
+          echo "---"
+          echo "results_file=${results_file}" >> "${GITHUB_OUTPUT}"
+          echo "failures=${failures}" >> "${GITHUB_OUTPUT}"
+          if [ "${failures}" -gt 0 ]; then
+            echo "WARNING: ${failures} upstream check(s) failed (will show in summary)"
+          fi
+
+      - name: Generate summary
+        id: summary
+        env:
+          RESULTS_FILE: ${{ steps.upstream_checks.outputs.results_file }}
+          UPSTREAM_FAILURES: ${{ steps.upstream_checks.outputs.failures }}
+        run: |
+          echo "=== Summary ===" >> "${GITHUB_STEP_SUMMARY}"
+          echo "" >> "${GITHUB_STEP_SUMMARY}"
+          echo "## Baked Tools Monitor Report" >> "${GITHUB_STEP_SUMMARY}"
+          echo "" >> "${GITHUB_STEP_SUMMARY}"
+          echo "| Tool | Current Version | Latest Upstream | Monitor Type | Update Impact | Status |" >> "${GITHUB_STEP_SUMMARY}"
+          echo "|------|----------------|-----------------|--------------|---------------|--------|" >> "${GITHUB_STEP_SUMMARY}"
+
+          failures=0
+          updates=0
+
+          # Load upstream results into associative array
+          declare -A upstream_map
+          if [ -f "${RESULTS_FILE:-}" ]; then
+            while IFS='|' read -r name current upstream _extra; do
+              if [ "${upstream}" = "CHECK_FAILED" ]; then
+                continue
+              fi
+              upstream_map["${name}"]="${upstream}"
+            done < "${RESULTS_FILE}"
+          fi
+
+          while IFS= read -r name; do
+            monitor=$(jq -r --arg n "${name}" '.tools[] | select(.name == $n) | .monitorType' managed-tools/baked-tools.json)
+            current=$(jq -r --arg n "${name}" '.tools[] | select(.name == $n) | .currentVersion' managed-tools/baked-tools.json)
+            impact=$(jq -r --arg n "${name}" '.tools[] | select(.name == $n) | .updateImpact' managed-tools/baked-tools.json)
+
+            if [ -z "${monitor}" ] || [ "${monitor}" = "null" ]; then
+              echo "| ${name} | ${current} | N/A | **missing-monitor** | ${impact} | ❌ |" >> "${GITHUB_STEP_SUMMARY}"
+              failures=$((failures + 1))
+              continue
+            fi
+
+            case "${monitor}" in
+              dependabot)
+                upstream="${upstream_map[${name}]:-}"
+                if [ -n "${upstream}" ] && [ "${upstream}" != "${current}" ]; then
+                  echo "| ${name} | ${current} | ${upstream} | dependabot (docker) | ${impact} | ⚠️ update-available |" >> "${GITHUB_STEP_SUMMARY}"
+                  updates=$((updates + 1))
+                elif [ -n "${upstream}" ] && [ "${upstream}" = "${current}" ]; then
+                  echo "| ${name} | ${current} | ${upstream} | dependabot (docker) | ${impact} | ✅ current |" >> "${GITHUB_STEP_SUMMARY}"
+                else
+                  echo "| ${name} | ${current} | _not checked_ | dependabot (docker) | ${impact} | ✅ (dependabot) |" >> "${GITHUB_STEP_SUMMARY}"
+                fi
+                ;;
+              baked-tools-monitor)
+                upstream="${upstream_map[${name}]:-}"
+                if [ -z "${upstream}" ]; then
+                  echo "| ${name} | ${current} | _unchecked_ | baked-tools-monitor | ${impact} | ❌ **error** |" >> "${GITHUB_STEP_SUMMARY}"
+                  failures=$((failures + 1))
+                elif [ "${upstream}" != "${current}" ]; then
+                  echo "| ${name} | ${current} | ${upstream} | baked-tools-monitor | ${impact} | ⚠️ update-available |" >> "${GITHUB_STEP_SUMMARY}"
+                  updates=$((updates + 1))
+                else
+                  echo "| ${name} | ${current} | ${upstream} | baked-tools-monitor | ${impact} | ✅ current |" >> "${GITHUB_STEP_SUMMARY}"
+                fi
+                ;;
+              intentionally-unpinned)
+                echo "| ${name} | ${current} | _unpinned_ | intentionally-unpinned | ${impact} | ✅ (unchecked-intentional) |" >> "${GITHUB_STEP_SUMMARY}"
+                ;;
+              *)
+                echo "| ${name} | ${current} | N/A | **${monitor}** | ${impact} | ❌ error |" >> "${GITHUB_STEP_SUMMARY}"
+                failures=$((failures + 1))
+                ;;
+            esac
+          done < <(jq -r '.tools[] | .name' managed-tools/baked-tools.json)
+
+          echo "" >> "${GITHUB_STEP_SUMMARY}"
+          echo "### Summary" >> "${GITHUB_STEP_SUMMARY}"
+          echo "" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- **Total tools**: $(jq '.tools | length' managed-tools/baked-tools.json)" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- **Updates available**: ${updates}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- **Upstream check failures**: ${UPSTREAM_FAILURES:-0}" >> "${GITHUB_STEP_SUMMARY}"
+
+          if [ "${failures}" -gt 0 ]; then
+            echo "- **Errors**: ${failures}" >> "${GITHUB_STEP_SUMMARY}"
+            echo "" >> "${GITHUB_STEP_SUMMARY}"
+            echo "❌ **${failures} error(s) found** — check validation failures above." >> "${GITHUB_STEP_SUMMARY}"
+            exit 1
+          fi
+
+          if [ "${updates}" -gt 0 ]; then
+            echo "" >> "${GITHUB_STEP_SUMMARY}"
+            echo "⚠️ **${updates} update(s) available** — Dependabot PRs or manual bump required." >> "${GITHUB_STEP_SUMMARY}"
+          fi
+
+          echo "" >> "${GITHUB_STEP_SUMMARY}"
+          echo "✅ All baked tools have valid monitor types." >> "${GITHUB_STEP_SUMMARY}"

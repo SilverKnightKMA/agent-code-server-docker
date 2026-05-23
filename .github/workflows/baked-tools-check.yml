@@ -57,13 +57,11 @@ jobs:
         run: |
           failures=0
           for cmd in code-server node npm bun omp docker dockerd gosu dumb-init git curl jq python3 pip; do
-            # bun is installed at /home/coder/.bun/bin/bun, not in root PATH
-            extra_path="/home/coder/.bun/bin"
-            if docker run --rm --entrypoint bash -e "PATH=${extra_path}:\${PATH}" code-server-omp:test -c "command -v ${cmd}" > /dev/null 2>&1; then
+            if docker run --rm --entrypoint /bin/bash -e "PATH=/home/coder/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" code-server-omp:test -c "command -v ${cmd}" > /dev/null 2>&1; then
               echo "OK: ${cmd} found"
             else
               echo "FAIL: ${cmd} not found"
-              docker run --rm --entrypoint bash -e "PATH=${extra_path}:\${PATH}" code-server-omp:test -c "command -v ${cmd} 2>&1; which ${cmd} 2>&1 || true; ls -la /home/coder/.bun/bin/${cmd} 2>/dev/null || true" 2>&1 || true
+              docker run --rm --entrypoint /bin/bash -e "PATH=/home/coder/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" code-server-omp:test -c "command -v ${cmd} 2>&1; which ${cmd} 2>&1 || true; ls -la /home/coder/.bun/bin/${cmd} 2>/dev/null || true" 2>&1 || true
               failures=$((failures + 1))
             fi
           done
@@ -78,7 +76,7 @@ jobs:
           failures=0
           for cmd in code-server node npm bun omp docker dockerd git python3; do
             echo "=== ${cmd} --version ==="
-            version=$(docker run --rm --entrypoint bash -e "PATH=/home/coder/.bun/bin:${PATH}" code-server-omp:test -c "${cmd} --version 2>&1" || echo "VERSION CHECK FAILED")
+            version=$(docker run --rm --entrypoint /bin/bash -e "PATH=/home/coder/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" code-server-omp:test -c "${cmd} --version 2>&1" || echo "VERSION CHECK FAILED")
             echo "${version}"
             if echo "${version}" | grep -q "VERSION CHECK FAILED"; then
               echo "FAIL: ${cmd} --version failed"
@@ -94,7 +92,7 @@ jobs:
       - name: Verify omp works without manual PATH export (regression check)
         run: |
           echo "=== omp --version (fresh shell, no manual export) ==="
-          result=$(docker run --rm --entrypoint bash code-server-omp:test -i -c 'omp --version' 2>&1 || echo "OMP FAILED")
+          result=$(docker run --rm --entrypoint /bin/bash code-server-omp:test -i -c 'omp --version' 2>&1 || echo "OMP FAILED")
           echo "${result}"
           if echo "${result}" | grep -qi "No such file or directory\|env.*bun"; then
             echo "FAIL: omp --version failed with 'bun not found'"
@@ -105,7 +103,7 @@ jobs:
       - name: Verify bun without manual PATH export
         run: |
           echo "=== bun --version (fresh shell) ==="
-          result=$(docker run --rm --entrypoint bash code-server-omp:test -i -c 'bun --version' 2>&1 || echo "BUN FAILED")
+          result=$(docker run --rm --entrypoint /bin/bash code-server-omp:test -i -c 'bun --version' 2>&1 || echo "BUN FAILED")
           echo "${result}"
           if echo "${result}" | grep -q "BUN FAILED"; then
             echo "FAIL: bun --version failed"
@@ -117,7 +115,7 @@ jobs:
         run: |
           expected_paths="/home/coder/.bun/bin /home/coder/.npm-global/bin /home/coder/.local/bin /home/coder/.local/go/bin /home/coder/.go/bin /home/coder/.cargo/bin /home/coder/.local/pip/bin"
 
-          shell_path=$(docker run --rm --entrypoint bash code-server-omp:test -i -c 'echo "$PATH"' 2>&1)
+          shell_path=$(docker run --rm --entrypoint /bin/bash code-server-omp:test -i -c 'echo "$PATH"' 2>&1)
           echo "Fresh shell PATH: ${shell_path}"
 
           failures=0
@@ -141,7 +139,6 @@ jobs:
           echo "=== Entrypoint startup check ==="
           container_id=$(docker run -d --rm code-server-omp:test 2>&1) || {
             echo "Container failed to start (expected without volumes)"
-            echo "This is acceptable — entrypoint may require /home/coder subdirs"
             echo "OK: quick-start not required"
             exit 0
           }

@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "comment": "Managed tool manifest for code-server-omp-docker. Pinned versions for 3-tier dev tools.",
+  "families": {
+    "npm": {
+      "comment": "npm-managed JS/TS language servers and essential coding tools",
+      "installMethod": "npm install --ignore-scripts",
+      "installPath": "~/.npm-global",
+      "statePath": "~/.npm-global/state",
+      "sourceType": "managed-tools-config",
+      "tools": [
+        { "name": "pyright",                   "pkg": "pyright",                     "version": "1.1.409" },
+        { "name": "eslint",                    "pkg": "eslint",                      "version": "10.3.0" },
+        { "name": "prettier",                  "pkg": "prettier",                    "version": "3.8.3" },
+        { "name": "typescript",                "pkg": "typescript",                  "version": "6.0.3" },
+        { "name": "typescript-language-server", "pkg": "typescript-language-server", "version": "5.2.0" },
+        { "name": "yaml-language-server",      "pkg": "yaml-language-server",       "version": "1.23.0" },
+        { "name": "bash-language-server",      "pkg": "bash-language-server",       "version": "5.6.0" }
+      ]
+    },
+    "go_toolchain": {
+      "comment": "Go toolchain release tarball installed into mounted path",
+      "installMethod": "release-tarball",
+      "installPath": "~/.local/go",
+      "statePath": "~/.local/state/go",
+      "sourceType": "tarball",
+      "checksumSource": "upstream-sha256-file",
+      "checksumFormat": "sha256sum",
+      "checksumUrlPattern": "https://go.dev/dl/?mode=json&include=all",
+      "tools": [
+        { "name": "go", "version": "1.26.2", "os": "linux", "arch": "amd64", "assetPattern": "go{version}.linux-amd64.tar.gz" }
+      ]
+    },
+    "go_tools": {
+      "comment": "Go tools installed via go install using managed Go toolchain",
+      "installMethod": "go install pkg@version",
+      "installPath": "~/.go/bin",
+      "statePath": "~/.go/state",
+      "sourceType": "managed-tools-config",
+      "gobin": "~/.go/bin",
+      "tools": [
+        { "name": "gopls",  "pkg": "golang.org/x/tools/gopls",  "version": "v0.21.1" },
+        { "name": "shfmt",  "pkg": "mvdan.cc/sh/v3/cmd/shfmt",  "version": "v3.13.1" }
+      ]
+    },
+    "gh": {
+      "comment": "GitHub CLI as managed release binary",
+      "installMethod": "release-binary",
+      "installPath": "~/.local/bin/gh",
+      "statePath": "~/.config/gh",
+      "sourceType": "github-release-asset",
+      "checksumSource": "upstream-checksum-file",
+      "checksumFormat": "sha256sum",
+      "checksumPolicy": "requireUpstreamChecksum",
+      "tools": [
+        { "name": "gh", "version": "2.77.0", "repo": "cli/cli", "os": "linux", "arch": "amd64", "assetPattern": "gh_{version}_linux_amd64.tar.gz", "binPath": "gh_{version}_linux_amd64/bin/gh" }
+      ]
+    },
+    "release_binaries": {
+      "comment": "Lightweight release binaries for everyday dev workflow",
+      "installMethod": "release-binary",
+      "installPath": "~/.local/bin",
+      "statePath": "~/.local/state/managed-release-binaries",
+      "sourceType": "github-release-asset",
+      "tools": [
+        {
+          "name": "yq",
+          "version": "4.53.2",
+          "repo": "mikefarah/yq",
+          "assetPattern": "yq_linux_amd64",
+          "checksumAsset": "checksums",
+          "checksumFormat": "yq-checksums",
+          "checksumPolicy": "requireUpstreamChecksum"
+        },
+        {
+          "name": "ripgrep",
+          "version": "15.1.0",
+          "repo": "BurntSushi/ripgrep",
+          "assetPattern": "ripgrep-{version}-x86_64-unknown-linux-musl.tar.gz",
+          "checksumAsset": "ripgrep-{version}-x86_64-unknown-linux-musl.tar.gz.sha256",
+          "checksumFormat": "sha256sum",
+          "checksumPolicy": "requireUpstreamChecksum",
+          "binPath": "ripgrep-{version}-x86_64-unknown-linux-musl/rg"
+        },
+        {
+          "name": "actionlint",
+          "version": "1.7.12",
+          "repo": "rhysd/actionlint",
+          "assetPattern": "actionlint_{version}_linux_amd64.tar.gz",
+          "checksumAsset": "actionlint_{version}_checksums.txt",
+          "checksumFormat": "sha256sum",
+          "checksumPolicy": "requireUpstreamChecksum"
+        },
+        {
+          "name": "hadolint",
+          "version": "2.14.0",
+          "repo": "hadolint/hadolint",
+          "assetPattern": "hadolint-linux-x86_64",
+          "checksumAsset": "hadolint-linux-x86_64.sha256",
+          "checksumFormat": "sha256sum",
+          "checksumPolicy": "requireUpstreamChecksum"
+        }
+      ]
+    },
+    "rustup": {
+      "comment": "Rust toolchain managed via rustup",
+      "installMethod": "rustup",
+      "installPath": "~/.rustup",
+      "cargoHome": "~/.cargo",
+      "statePath": "~/.rustup/state",
+      "sourceType": "rustup-toolchain",
+      "tools": [
+        {
+          "name": "rustc",
+          "version": "1.88.0",
+          "channel": "stable",
+          "profile": "default"
+        },
+        {
+          "name": "cargo",
+          "version": "1.88.0",
+          "channel": "stable",
+          "profile": "default"
+        }
+      ]
+    }
+  }
+}

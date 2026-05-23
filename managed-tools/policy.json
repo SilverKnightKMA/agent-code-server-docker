@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "comment": "Compare and install policy for managed tools.",
+  "policy": {
+    "compare": {
+      "missing": "install",
+      "equal": "skip",
+      "lower": "upgrade",
+      "higher": "warn_and_skip",
+      "unparseable": "warn_and_skip"
+    },
+    "checksumPolicy": {
+      "requireUpstreamChecksum": {
+        "description": "Must use authoritative upstream checksum file. GitHub automatic asset digest is NOT acceptable.",
+        "allowDownloadAndHash": false
+      }
+    },
+    "versionNormalization": {
+      "npm": "semver-strip-prefix",
+      "go": "semver-strip-prefix",
+      "go_toolchain": "semver",
+      "gh": "semver-strip-prefix",
+      "release_binaries": "semver-strip-prefix",
+      "rustup": "semver"
+    },
+    "detection": {
+      "npm": "npm list --depth=0 --json or npm --version",
+      "go_toolchain": "go version output parsing",
+      "go_tools": "go version -m <binary>",
+      "gh": "gh --version",
+      "release_binaries": "<binary> --version or <binary> version",
+      "rustup": "rustup --version && rustc --version"
+    }
+  }
+}

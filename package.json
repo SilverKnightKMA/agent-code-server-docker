@@ -1,0 +1,33 @@
+{
+  "name": "code-server-omp-docker-toolchain",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Managed toolchain scripts for code-server-omp Docker image.",
+  "license": "MIT",
+  "scripts": {
+    "managed-tools:init": "npm run managed-tools:npm:init && npm run managed-tools:go:init && npm run managed-tools:mounted:init",
+    "managed-tools:status": "node scripts/managed-tools-status.mjs status",
+    "managed-tools:report": "node scripts/managed-tools-status.mjs report",
+    "managed-tools:compare": "node scripts/managed-tools-status.mjs compare",
+    "managed-tools:npm:init": "node scripts/managed-npm-tools.mjs init",
+    "managed-tools:npm:status": "node scripts/managed-npm-tools.mjs status",
+    "managed-tools:npm:compare": "node scripts/managed-npm-tools.mjs compare",
+    "managed-tools:go:init": "node scripts/managed-go-tools.mjs init",
+    "managed-tools:go:status": "node scripts/managed-go-tools.mjs status",
+    "managed-tools:go:compare": "node scripts/managed-go-tools.mjs compare",
+    "managed-tools:mounted:init": "node scripts/managed-mounted-tools.mjs init",
+    "managed-tools:mounted:status": "node scripts/managed-mounted-tools.mjs status",
+    "managed-tools:mounted:compare": "node scripts/managed-mounted-tools.mjs compare",
+    "managed-tools:rust:status": "node scripts/managed-mounted-tools.mjs status"
+  },
+  "dependencies": {
+    "@oh-my-pi/pi-coding-agent": "15.2.4",
+    "eslint": "10.3.0",
+    "prettier": "3.8.3",
+    "pyright": "1.1.409",
+    "typescript": "6.0.3",
+    "typescript-language-server": "5.2.0",
+    "yaml-language-server": "1.23.0",
+    "bash-language-server": "5.6.0"
+  }
+}

@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Managed tools temp/cache
+.config/
+.cache/
+.local/
+.npm-global/
+.bun/
+.cargo/
+.rustup/
+.go/
+.docker/
+.ssh/
+workspaces/
+
+# Data dirs from compose example
+data/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+# Build artifacts
+*.deb
+*.tar.gz
+*.tar.xz

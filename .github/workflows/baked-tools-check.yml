@@ -150,7 +150,7 @@ jobs:
             echo "FAIL: expected user coder (uid=1000)"
             failures=$((failures + 1))
           fi
-          if ! echo "${result}" | grep -q "HOME=/home/coder"; then
+          if ! echo "${result}" | grep -q "HOME: /home/coder"; then
             echo "FAIL: expected HOME=/home/coder"
             failures=$((failures + 1))
           fi

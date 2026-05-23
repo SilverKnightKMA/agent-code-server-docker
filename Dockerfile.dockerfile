@@ -181,6 +181,27 @@ RUN mkdir -p \
   && chown -R coder:coder /home/coder \
   && npm config set prefix /home/coder/.npm-global
 
+# ── Shell profile: PATH for code-server integrated terminals ──────────
+# code-server spawns bash -i (interactive non-login) which reads
+# /etc/bash.bashrc then ~/.bashrc. The profile.d script only gets
+# loaded by login shells, so source it from /etc/bash.bashrc.
+RUN mkdir -p /etc/profile.d \
+  && printf '%s\n' \
+    '# code-server-omp: PATH and environment for managed tool directories' \
+    '# This script is sourced from /etc/bash.bashrc and /etc/profile' \
+    '' \
+    'BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"' \
+    'NPM_CONFIG_PREFIX="${NPM_CONFIG_PREFIX:-$HOME/.npm-global}"' \
+    'GOPATH="${GOPATH:-$HOME/.go}"' \
+    'GOBIN="${GOBIN:-$HOME/.go/bin}"' \
+    'CARGO_HOME="${CARGO_HOME:-$HOME/.cargo}"' \
+    'PYTHONUSERBASE="${PYTHONUSERBASE:-$HOME/.local/pip}"' \
+    '' \
+    'PATH="$HOME/.bun/bin:$HOME/.npm-global/bin:$HOME/.local/bin:$HOME/.local/go/bin:$HOME/.go/bin:$HOME/.cargo/bin:$HOME/.local/pip/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"' \
+    'export BUN_INSTALL NPM_CONFIG_PREFIX GOPATH GOBIN CARGO_HOME PYTHONUSERBASE PATH' \
+    > /etc/profile.d/code-server-omp-path.sh \
+  && printf '\n# code-server-omp\n. /etc/profile.d/code-server-omp-path.sh\n' >> /etc/bash.bashrc
+
 # ── Entrypoint.d scripts (run on container start) ───────────────────
 # Users can mount scripts here to customize workspace initialization.
 # https://github.com/coder/code-server/issues/5177

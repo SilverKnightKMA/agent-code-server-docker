@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { formatFields } from "./managed-tools-output.mjs";
 
-const defaultBaseUrl = "https://raw.githubusercontent.com/code-server-omp/code-server-omp-docker/main/managed-tools";
+const defaultBaseUrl = "https://raw.githubusercontent.com/SilverKnightKMA/code-server-omp-docker/main/managed-tools";
 const configFiles = ["manifest.json", "policy.json"];
 const defaultXdgCacheHome = path.join(os.homedir(), ".cache");
 
@@ -18,10 +18,19 @@ function cacheDir() {
     ?? path.join(xdgCacheHome, "code-server-omp", "config"));
 }
 
-function configSource() {
-  const source = (process.env.CODE_SERVER_OMP_CONFIG_SOURCE ?? "auto").toLowerCase();
-  if (["auto", "online", "baked"].includes(source)) return source;
-  throw new Error(`CODE_SERVER_OMP_CONFIG_SOURCE must be auto, online, or baked; got ${source}`);
+function configMode() {
+  const mode = (process.env.CODE_SERVER_OMP_MANAGED_TOOLS_CONFIG_MODE
+    ?? process.env.CODE_SERVER_OMP_CONFIG_SOURCE
+    ?? "auto").toLowerCase();
+  if (["auto", "online", "baked"].includes(mode)) return mode;
+  throw new Error(`CODE_SERVER_OMP_MANAGED_TOOLS_CONFIG_MODE must be auto, online, or baked; got ${mode}`);
+}
+
+function allowBakedFallback() {
+  const val = process.env.CODE_SERVER_OMP_MANAGED_TOOLS_ALLOW_BAKED_FALLBACK
+    ?? process.env.CODE_SERVER_OMP_ALLOW_BAKED_FALLBACK
+    ?? "";
+  return val === "true" || val === "1";
 }
 
 function normalizeBaseUrl(value) {
@@ -33,7 +42,10 @@ function normalizeBaseUrl(value) {
 }
 
 function configBaseUrl() {
-  return normalizeBaseUrl(process.env.CODE_SERVER_OMP_CONFIG_BASE_URL ?? defaultBaseUrl);
+  const url = process.env.CODE_SERVER_OMP_MANAGED_TOOLS_BASE_URL
+    ?? process.env.CODE_SERVER_OMP_CONFIG_BASE_URL
+    ?? defaultBaseUrl;
+  return normalizeBaseUrl(url);
 }
 
 function fetchTimeoutMs() {
@@ -116,10 +128,11 @@ function warnConfigFailure(source, error) {
   console.warn(`[warn] ${formatFields({ family: "managed-tools-config", source, result: "failed", diagnostic: error.message })}`);
 }
 
-function logConfig(result, mode) {
+function logConfig(result, mode, fallback) {
   console.log(`[config] ${formatFields({
     source: result.source,
     mode,
+    fallback: fallback ?? "no",
     base_url: result.baseUrl,
     directory: result.directory,
     cache_dir: result.source === "online" ? cacheDir() : undefined,
@@ -127,11 +140,12 @@ function logConfig(result, mode) {
 }
 
 export async function loadManagedToolsConfig(repoRoot) {
-  const mode = configSource();
+  const mode = configMode();
+  const allowBaked = allowBakedFallback();
 
   if (mode === "baked") {
     const result = await readBakedConfig(repoRoot);
-    logConfig(result, mode);
+    logConfig(result, mode, "no");
     return { manifest: result.files["manifest.json"].parsed, policy: result.files["policy.json"].parsed, source: result.source };
   }
 
@@ -142,22 +156,28 @@ export async function loadManagedToolsConfig(repoRoot) {
     } catch (error) {
       warnConfigFailure("cache-write", error);
     }
-    logConfig(result, mode);
+    logConfig(result, mode, "no");
     return { manifest: result.files["manifest.json"].parsed, policy: result.files["policy.json"].parsed, source: result.source };
   } catch (error) {
-    if (mode === "online") throw error;
     warnConfigFailure("online", error);
+    if (mode === "online") throw error;
+    // auto mode: hard-fail unless explicitly allowed to fall back to baked
+    if (!allowBaked && mode !== "baked") {
+      throw new Error(`[config] online config fetch failed and baked fallback is not enabled. `
+        + `Set CODE_SERVER_OMP_MANAGED_TOOLS_ALLOW_BAKED_FALLBACK=true to use baked config as an offline fallback.`);
+    }
   }
 
+  // Fallback path: only reached when allowBakedFallback is true
   try {
     const result = await readCachedConfig();
-    logConfig(result, mode);
+    logConfig(result, mode, "cache");
     return { manifest: result.files["manifest.json"].parsed, policy: result.files["policy.json"].parsed, source: result.source };
   } catch (error) {
     warnConfigFailure("cache", error);
   }
 
   const result = await readBakedConfig(repoRoot);
-  logConfig(result, mode);
+  logConfig(result, mode, "baked");
   return { manifest: result.files["manifest.json"].parsed, policy: result.files["policy.json"].parsed, source: result.source };
 }

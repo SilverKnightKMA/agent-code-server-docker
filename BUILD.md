@@ -82,3 +82,40 @@ npm run managed-tools:compare
   workspaces/      ← Code (mounted)
   entrypoint.d/    ← Startup hooks (mounted, optional)
 ```
+
+## Managed tools config
+
+The managed-tools scripts (`npm run managed-tools:status`, `:init`) fetch their
+manifest and policy from an **online upstream** by default:
+
+```
+https://raw.githubusercontent.com/SilverKnightKMA/code-server-omp-docker/main/managed-tools/{manifest,policy}.json
+```
+
+### Environment variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CODE_SERVER_OMP_MANAGED_TOOLS_BASE_URL` | `https://raw.githubusercontent.com/SilverKnightKMA/…` | Upstream base URL for config files |
+| `CODE_SERVER_OMP_MANAGED_TOOLS_CONFIG_MODE` | `auto` | `online` — require upstream, fail on error; `baked` — skip upstream, use baked config directly; `auto` — upstream with no fallback unless overridden |
+| `CODE_SERVER_OMP_MANAGED_TOOLS_ALLOW_BAKED_FALLBACK` | `false` | When `true`, fall back to baked config if upstream fetch fails (offline/emergency mode only) |
+| `CODE_SERVER_OMP_CONFIG_BASE_URL` | (same as `MANAGED_TOOLS_BASE_URL`) | Legacy alias |
+| `CODE_SERVER_OMP_CONFIG_SOURCE` | `auto` | Legacy alias for `MANAGED_TOOLS_CONFIG_MODE` |
+
+### Behavior
+
+- **Normal (healthy) mode**: `CODE_SERVER_OMP_MANAGED_TOOLS_CONFIG_MODE=auto` (default).
+  Managed-tools fetch config from upstream. If upstream fails, the command **fails**
+  — it does not silently fall back to baked config. This ensures the container
+  always uses the published manifest/policy from the repo.
+
+- **Online-only mode**: `CODE_SERVER_OMP_MANAGED_TOOLS_CONFIG_MODE=online`.
+  Same as auto but explicitly enforced. Fails hard on fetch error (no cache, no baked).
+
+- **Baked-only mode**: `CODE_SERVER_OMP_MANAGED_TOOLS_CONFIG_MODE=baked`.
+  Skips upstream entirely. Uses config baked into the image. Useful during
+  image development or when upstream is unreachable.
+
+- **Emergency fallback**: Set `CODE_SERVER_OMP_MANAGED_TOOLS_ALLOW_BAKED_FALLBACK=true`
+  to allow falling back through cache → baked config when upstream fetch fails.
+  Intended for offline/gateway environments only.

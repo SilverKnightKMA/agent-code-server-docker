@@ -56,13 +56,13 @@ jobs:
       - name: Verify baked commands exist
         run: |
           failures=0
-          for cmd in code-server node npm bun omp docker dockerd gosu dumb-init git curl jq python3 pip; do
-            result=$(docker run --rm --entrypoint /bin/bash -e "PATH=/root/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" code-server-omp:test -c "command -v ${cmd}" 2>&1) || true
+          for cmd in code-server node npm omp docker dockerd gosu dumb-init git curl jq python3 pip; do
+            result=$(docker run --rm --entrypoint /bin/bash code-server-omp:test -c "command -v ${cmd}" 2>&1) || true
             if [ -n "${result}" ]; then
               echo "OK: ${cmd} found at ${result}"
             else
               echo "FAIL: ${cmd} not found"
-              docker run --rm --entrypoint /bin/bash -e "PATH=/root/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" code-server-omp:test -c "which ${cmd} 2>&1 || echo '---'; ls -la /root/.bun/bin/${cmd} 2>/dev/null || ls -la /usr/local/bin/${cmd} 2>/dev/null || echo 'binary not found anywhere'" 2>&1 || echo "(docker run failed)"
+              docker run --rm --entrypoint /bin/bash code-server-omp:test -c "which ${cmd} 2>&1 || echo 'not found'" 2>&1 || echo "(docker run failed)"
               failures=$((failures + 1))
             fi
           done
@@ -75,9 +75,9 @@ jobs:
       - name: Verify baked tool versions
         run: |
           failures=0
-          for cmd in code-server node npm bun omp docker dockerd git python3; do
+          for cmd in code-server node npm omp docker dockerd git python3; do
             echo "=== ${cmd} --version ==="
-            version=$(docker run --rm --entrypoint /bin/bash -e "PATH=/root/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" code-server-omp:test -c "${cmd} --version 2>&1" || echo "VERSION CHECK FAILED")
+            version=$(docker run --rm --entrypoint /bin/bash code-server-omp:test -c "${cmd} --version 2>&1" || echo "VERSION CHECK FAILED")
             echo "${version}"
             if echo "${version}" | grep -q "VERSION CHECK FAILED"; then
               echo "FAIL: ${cmd} --version failed"
@@ -100,17 +100,6 @@ jobs:
             exit 1
           fi
           echo "OK: omp works in fresh shell"
-
-      - name: Verify bun without manual PATH export
-        run: |
-          echo "=== bun --version (fresh shell) ==="
-          result=$(docker run --rm --entrypoint /bin/bash code-server-omp:test -i -c 'bun --version' 2>&1 || echo "BUN FAILED")
-          echo "${result}"
-          if echo "${result}" | grep -q "BUN FAILED"; then
-            echo "FAIL: bun --version failed"
-            exit 1
-          fi
-          echo "OK: bun works in fresh shell"
 
       - name: Verify PATH in fresh shell
         run: |

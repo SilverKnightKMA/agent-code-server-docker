@@ -1,0 +1,212 @@
+name: Managed Tools Check
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - package.json
+      - package-lock.json
+      - go.mod
+      - go.sum
+      - tools.go
+      - scripts/managed-npm-tools.mjs
+      - scripts/managed-go-tools.mjs
+      - scripts/managed-mounted-tools.mjs
+      - scripts/managed-tools-config.mjs
+      - scripts/managed-tools-output.mjs
+      - scripts/managed-tools-status.mjs
+      - scripts/validate-managed-tools.mjs
+      - managed-tools/**
+      - .github/workflows/managed-tools-check.yml
+  push:
+    branches:
+      - main
+    paths:
+      - package.json
+      - package-lock.json
+      - go.mod
+      - go.sum
+      - tools.go
+      - scripts/managed-npm-tools.mjs
+      - scripts/managed-go-tools.mjs
+      - scripts/managed-mounted-tools.mjs
+      - scripts/managed-tools-config.mjs
+      - scripts/managed-tools-output.mjs
+      - scripts/managed-tools-status.mjs
+      - scripts/validate-managed-tools.mjs
+      - managed-tools/**
+      - .github/workflows/managed-tools-check.yml
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: Install & verify managed tools
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: builder
+
+    steps:
+      - name: Checkout builder repository
+        uses: actions/checkout@v6
+        with:
+          path: builder
+          fetch-depth: 1
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            curl \
+            ca-certificates \
+            git \
+            xz-utils \
+            unzip \
+            build-essential \
+            pkg-config \
+            libssl-dev
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: builder/package-lock.json
+
+      - name: Create clean home directories
+        run: |
+          TEST_HOME="${HOME}/managed-tools-test"
+          rm -rf "${TEST_HOME}"
+          mkdir -p \
+            "${TEST_HOME}/.npm-global" \
+            "${TEST_HOME}/.local/bin" \
+            "${TEST_HOME}/.local/go" \
+            "${TEST_HOME}/.go/bin" \
+            "${TEST_HOME}/.cargo/bin" \
+            "${TEST_HOME}/.rustup" \
+            "${TEST_HOME}/.cache"
+
+          {
+            echo "TEST_HOME=${TEST_HOME}"
+            echo "HOME=${TEST_HOME}"
+            echo "MANAGED_NPM_PREFIX=${TEST_HOME}/.npm-global"
+            echo "NPM_CONFIG_PREFIX=${TEST_HOME}/.npm-global"
+            echo "MANAGED_RELEASE_BIN_DIR=${TEST_HOME}/.local/bin"
+            echo "MANAGED_GO_ROOT=${TEST_HOME}/.local/go"
+            echo "GOPATH=${TEST_HOME}/.go"
+            echo "GOBIN=${TEST_HOME}/.go/bin"
+            echo "CARGO_HOME=${TEST_HOME}/.cargo"
+            echo "MANAGED_CARGO_HOME=${TEST_HOME}/.cargo"
+            echo "RUSTUP_HOME=${TEST_HOME}/.rustup"
+            echo "MANAGED_RUSTUP_HOME=${TEST_HOME}/.rustup"
+            echo "PATH=${TEST_HOME}/.npm-global/bin:${TEST_HOME}/.local/go/bin:${TEST_HOME}/.go/bin:${TEST_HOME}/.cargo/bin:${TEST_HOME}/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          } >> "$GITHUB_ENV"
+
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Check config source (must be online)
+        run: |
+          echo "=== managed-tools:status (pre-init) ==="
+          output=$(npm run --silent managed-tools:status 2>&1 || true)
+          echo "$output"
+
+          if ! echo "$output" | grep -q "source=online"; then
+            echo "FAIL: config source is not online"
+            echo "$output" | grep "\[config\]" || echo "(none)"
+            exit 1
+          fi
+
+          if echo "$output" | grep -q "fallback=baked\|fallback=cache\|fallback=yes"; then
+            echo "FAIL: config used fallback path"
+            echo "$output" | grep "fallback="
+            exit 1
+          fi
+
+          echo "OK: config source=online, no fallback"
+
+      - name: Check for unresolved templates in URLs
+        run: |
+          output=$(npm run --silent managed-tools:status 2>&1 || true)
+          if echo "$output" | grep -q '{version}'; then
+            echo "FAIL: unresolved template {version}:"
+            echo "$output" | grep '{version}'
+            exit 1
+          fi
+          echo "OK: no unresolved templates"
+
+      - name: Install all managed tools
+        run: |
+          echo "=== managed-tools:init ==="
+          npm run --silent managed-tools:init 2>&1
+          exit_code=$?
+          if [ $exit_code -ne 0 ]; then
+            echo "FAIL: managed-tools:init exited with code $exit_code"
+            exit $exit_code
+          fi
+          echo "OK: all tools installed"
+        timeout-minutes: 30
+
+      - name: Verify all tools are installed (state=equal)
+        run: |
+          echo "=== managed-tools:status (post-init) ==="
+          output=$(npm run --silent managed-tools:status 2>&1)
+          echo "$output"
+
+          failures=0
+
+          required_tools="pyright eslint prettier typescript typescript-language-server yaml-language-server bash-language-server go gopls shfmt gh yq ripgrep actionlint hadolint rustc cargo"
+
+          for tool in $required_tools; do
+            status_line=$(echo "$output" | grep -E "^status.* tool=${tool}( |$)")
+            if [ -z "$status_line" ]; then
+              echo "FAIL: no status line for ${tool}"
+              failures=$((failures + 1))
+              continue
+            fi
+            if ! echo "$status_line" | grep -q "state=equal"; then
+              echo "FAIL: ${tool} state is not equal"
+              echo "  ${status_line}"
+              failures=$((failures + 1))
+            fi
+          done
+
+          missing_total=$(echo "$output" | grep -c "state=missing" 2>/dev/null || echo 0)
+          action_total=$(echo "$output" | grep -c "action=install" 2>/dev/null || echo 0)
+          if [ "${missing_total}" -gt 0 ] || [ "${action_total}" -gt 0 ]; then
+            echo "FAIL: ${missing_total} missing, ${action_total} need action"
+            failures=$((failures + 1))
+          fi
+
+          if echo "$output" | grep -q '{version}'; then
+            echo "FAIL: unresolved template {version} in output"
+            failures=$((failures + 1))
+          fi
+
+          if ! echo "$output" | grep -q "source=online"; then
+            echo "FAIL: config source is not online after init"
+            failures=$((failures + 1))
+          fi
+
+          if [ "${failures}" -gt 0 ]; then
+            echo "FAIL: ${failures} verification(s) failed"
+            exit 1
+          fi
+
+          echo "OK: all tools verified state=equal"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Managed Tools Check" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          for dir in "${HOME}/.npm-global/bin" "${HOME}/.local/bin" "${HOME}/.local/go/bin" "${HOME}/.go/bin" "${HOME}/.cargo/bin"; do
+            if [ -d "$dir" ]; then
+              count=$(ls "$dir" 2>/dev/null | wc -l)
+              echo "- \`$dir\`: ${count} entries" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done

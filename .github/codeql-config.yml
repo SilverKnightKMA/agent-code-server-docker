@@ -1,0 +1,5 @@
+paths-ignore:
+  - '**/*.go'
+  - go.mod
+  - go.sum
+  - tools.go

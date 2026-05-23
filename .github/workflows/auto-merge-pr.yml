@@ -45,22 +45,23 @@ jobs:
 
           gh pr view "${PR_NUMBER}" \
             --repo "${GH_REPO}" \
-            --json number,author,headRefName,labels,isDraft,mergeStateStatus \
+            --json number,author,headRefName,headRefOid,labels,isDraft,mergeStateStatus \
             --jq '
               . as $pr |
               "number=\($pr.number)",
               "author=\($pr.author.login)",
               "headRefName=\($pr.headRefName)",
+              "headRefOid=\($pr.headRefOid)",
               "isDraft=\($pr.isDraft)",
               "mergeStateStatus=\($pr.mergeStateStatus)",
               "labels=\($pr.labels | map(.name) | join(","))"
             ' >> "$GITHUB_OUTPUT"
+          echo "pr_number=${PR_NUMBER}" >> "$GITHUB_OUTPUT"
 
       - name: Check automation trust policy
         id: policy
         env:
           PR_AUTHOR: ${{ steps.pr.outputs.author }}
-          PR_HEAD_REF: ${{ steps.pr.outputs.headRefName }}
           PR_LABELS: ${{ steps.pr.outputs.labels }}
           PR_IS_DRAFT: ${{ steps.pr.outputs.isDraft }}
           AUTOMATION_BOT_LOGIN: ${{ vars.AUTOMATION_BOT_LOGIN }}
@@ -101,6 +102,103 @@ jobs:
             echo "has_wip_label=${has_wip_label}"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Classify changed files and check applicable workflow runs
+        id: path_check
+        if: steps.policy.outputs.allowed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
+          HEAD_OID: ${{ steps.pr.outputs.headRefOid }}
+        run: |
+          echo "=== Changed files ==="
+          changed=$(gh pr view "${PR_NUMBER}" --repo "${GH_REPO}" --json files --jq '.files[].path' 2>/dev/null || echo "")
+          if [ -z "${changed}" ]; then
+            echo "FAIL: could not list changed files"
+            echo "checks_ok=false" >> "$GITHUB_OUTPUT"
+            echo "failure_reason=Could not list changed files via API" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "${changed}"
+
+          # Classify into path groups
+          touches_baked=false
+          touches_managed=false
+
+          while IFS= read -r filepath; do
+            case "${filepath}" in
+              Dockerfile*|scripts/*|bootstrap.sh|package.json|package-lock.json|bun.lock|go.mod|go.sum|tools.go|managed-tools/baked-tools.json|.github/workflows/baked-tools-check.yml|.github/workflows/baked-tools-monitor.yml)
+                touches_baked=true
+                ;;
+              managed-tools/manifest.json|managed-tools/policy.json|.github/workflows/managed-tools-check.yml)
+                touches_managed=true
+                ;;
+            esac
+            # Also match scripts/managed-*.mjs under managed-tools path group
+            case "${filepath}" in
+              scripts/managed-*.mjs)
+                touches_managed=true
+                ;;
+            esac
+          done <<< "${changed}"
+
+          echo "touches_baked=${touches_baked}"
+          echo "touches_managed=${touches_managed}"
+
+          # Build list of required checks
+          required_checks=""
+          if [ "${touches_baked}" = "true" ]; then
+            required_checks="${required_checks} Validate baked tools in image,Monitor baked tool versions,"
+          fi
+          if [ "${touches_managed}" = "true" ]; then
+            required_checks="${required_checks} Install & verify managed tools,"
+          fi
+
+          echo "required_checks=${required_checks}" >> "$GITHUB_OUTPUT"
+          echo "touches_baked=${touches_baked}" >> "$GITHUB_OUTPUT"
+          echo "touches_managed=${touches_managed}" >> "$GITHUB_OUTPUT"
+
+          # Query check runs for the PR head SHA
+          if [ -z "${required_checks}" ]; then
+            echo "checks_ok=true" >> "$GITHUB_OUTPUT"
+            echo "failure_reason=" >> "$GITHUB_OUTPUT"
+            echo "No path-specific checks required (docs-only or other change)"
+            exit 0
+          fi
+
+          IFS=',' read -ra checks <<< "${required_checks}"
+          checks_ok=true
+          failure_reason=""
+
+          # Fetch all check runs for the head commit
+          checks_json=$(gh api "repos/${GH_REPO}/commits/${HEAD_OID}/check-runs" --jq '.check_runs' 2>/dev/null || echo "[]")
+
+          for check_name in "${checks[@]}"; do
+            check_name=$(echo "${check_name}" | xargs)  # trim whitespace
+            echo "Checking: ${check_name}"
+
+            # Find the matching check run
+            conclusion=$(echo "${checks_json}" | jq -r --arg name "${check_name}" '.[] | select(.name == $name) | .conclusion // empty' | head -1)
+
+            if [ -z "${conclusion}" ]; then
+              echo "  MISSING: no check run found for '${check_name}'"
+              checks_ok=false
+              failure_reason="${failure_reason} Required path-specific check '${check_name}' not found;"
+            elif [ "${conclusion}" != "SUCCESS" ]; then
+              echo "  NOT SUCCESS: ${check_name} = ${conclusion}"
+              checks_ok=false
+              failure_reason="${failure_reason} Required path-specific check '${check_name}' is ${conclusion};"
+            else
+              echo "  OK: ${check_name} = SUCCESS"
+            fi
+          done
+
+          echo "checks_ok=${checks_ok}" >> "$GITHUB_OUTPUT"
+          echo "failure_reason=${failure_reason}" >> "$GITHUB_OUTPUT"
+          if [ "${checks_ok}" = "false" ]; then
+            echo "Path-specific checks not all successful."
+          fi
+
       - name: Explain skipped PR
         if: steps.policy.outputs.allowed != 'true'
         run: |
@@ -110,18 +208,24 @@ jobs:
           echo "Has automated label: ${{ steps.policy.outputs.has_automated_label }}"
           echo "Has wip label: ${{ steps.policy.outputs.has_wip_label }}"
 
+      - name: Explain path check failure
+        if: steps.policy.outputs.allowed == 'true' && steps.path_check.outputs.checks_ok != 'true'
+        run: |
+          echo "Auto-merge not enabled."
+          echo "Reason: ${{ steps.path_check.outputs.failure_reason }}"
+
       - name: Update branch when behind
-        if: steps.policy.outputs.allowed == 'true' && steps.pr.outputs.mergeStateStatus == 'BEHIND'
+        if: steps.policy.outputs.allowed == 'true' && steps.path_check.outputs.checks_ok == 'true' && steps.pr.outputs.mergeStateStatus == 'BEHIND'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
         run: gh pr update-branch "${PR_NUMBER}" --repo "${GH_REPO}"
 
       - name: Enable auto-merge
-        if: steps.policy.outputs.allowed == 'true'
+        if: steps.policy.outputs.allowed == 'true' && steps.path_check.outputs.checks_ok == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ steps.pr.outputs.number }}
-        run: gh pr merge "${PR_NUMBER}" --repo "${GH_REPO}" --auto --merge
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
+        run: gh pr merge "${PR_NUMBER}" --repo "${GH_REPO}" --auto --squash

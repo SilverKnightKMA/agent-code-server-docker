@@ -35,6 +35,12 @@ do
 done
 export PATH
 
+if [ "${CODE_SERVER_OMP_DEBUG:-false}" = "true" ]; then
+  echo "[debug] entrypoint user=$(id -un 2>/dev/null || echo unknown) uid=$(id -u) gid=$(id -g) groups=$(id -Gn 2>/dev/null || echo unknown)"
+  echo "[debug] env USER=${USER:-unset} HOME=${HOME:-unset} DOCKER_USER=${DOCKER_USER:-unset} ENABLE_DIND=${ENABLE_DIND:-unset} DOCKER_HOST=${DOCKER_HOST:-unset}"
+  echo "[debug] binaries docker=$(command -v docker 2>/dev/null || echo missing) dockerd=$(command -v dockerd 2>/dev/null || echo missing) fixuid=$(command -v fixuid 2>/dev/null || echo missing) sudo=$(command -v sudo 2>/dev/null || echo missing)"
+fi
+
 # ── Optional: Docker-in-Docker (must run as root, before fixuid) ───────────
 if [ "${ENABLE_DIND:-false}" = "true" ]; then
   if [ "$(id -u)" -ne 0 ]; then

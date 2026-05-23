@@ -15,6 +15,7 @@ services:
       CODE_SERVER_OMP_TMPDIR: /home/coder/.local/state/code-server-omp/tmp
       # CODE_SERVER_OMP_AUTOINSTALL: "true"
       # UI_PASSWORD: change-me
+      # SUDO_PASSWORD: change-me
 
       # Docker-in-Docker. Uncomment these blocks to enable:
       # ENABLE_DIND: "true"

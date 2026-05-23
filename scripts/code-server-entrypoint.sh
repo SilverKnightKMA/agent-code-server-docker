@@ -125,6 +125,15 @@ export XDG_CONFIG_HOME="${RUN_HOME}/.config"
 export XDG_DATA_HOME="${RUN_HOME}/.local/share"
 export XDG_CACHE_HOME="${RUN_HOME}/.cache"
 export XDG_STATE_HOME="${RUN_HOME}/.local/state"
+# ── Sudo password (LinuxServer-style) ───────────────────────────────
+if [ -n "${SUDO_PASSWORD-}" ]; then
+  echo "[entrypoint] configuring sudo for ${RUN_USER}..."
+  echo "${RUN_USER}:${SUDO_PASSWORD}" | chpasswd 2>/dev/null || \
+    echo "[warn] chpasswd failed" >&2
+  printf '%s ALL=(ALL) ALL\n' "${RUN_USER}" > /etc/sudoers.d/coder 2>/dev/null || \
+    echo "[warn] failed to create /etc/sudoers.d/coder" >&2
+  echo "[entrypoint] sudo enabled for ${RUN_USER}"
+fi
 
 # ── Docker group membership ─────────────────────────────────────────
 if [ "${ENABLE_DIND:-false}" = "true" ] && getent group docker >/dev/null 2>&1; then

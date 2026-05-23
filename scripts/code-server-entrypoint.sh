@@ -44,7 +44,11 @@ fi
 # ── Optional: Docker-in-Docker (must run as root, before fixuid) ───────────
 if [ "${ENABLE_DIND:-false}" = "true" ]; then
   if [ "$(id -u)" -ne 0 ]; then
-    echo "[dind] ENABLE_DIND=true requires root entrypoint" >&2
+    if command -v sudo >/dev/null 2>&1; then
+      echo "[dind] ENABLE_DIND=true requires root; re-executing entrypoint through sudo..."
+      exec sudo -E /usr/local/bin/code-server-omp-entrypoint "$@"
+    fi
+    echo "[dind] ENABLE_DIND=true requires root entrypoint and sudo is unavailable" >&2
     exit 1
   fi
 

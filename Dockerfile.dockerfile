@@ -30,7 +30,7 @@ COPY scripts/ /opt/code-server-omp/managed-tools/scripts/
 COPY scripts/code-server-entrypoint.sh /usr/local/bin/code-server-omp-entrypoint
 
 # ── Stage: code-server build ────────────────────────────────────────
-FROM debian:13-slim@sha256:d2ec0a1766c01dad04a185c2d5558b0adace167a7f1758ce80f0017698431d06 AS code-server-builder
+FROM debian:13-slim@sha256:b6e2a152f22a40ff69d92cb397223c906017e1391a73c952b588e51af8883bf8 AS code-server-builder
 
 # We copy code-server from the official release .deb rather than building
 # from source. This stage pins the exact version and architecture.
@@ -50,7 +50,7 @@ RUN curl -fsSL "https://github.com/coder/code-server/releases/download/v${CODE_S
 FROM docker:29.5.0-dind@sha256:8e3fae900cbfbdc14e8abca89a9e44363065cb535f34a09283c59cc0dde2de20 AS docker-dind
 
 # ── Stage: runtime ──────────────────────────────────────────────────
-FROM debian:13-slim@sha256:d2ec0a1766c01dad04a185c2d5558b0adace167a7f1758ce80f0017698431d06 AS runtime
+FROM debian:13-slim@sha256:b6e2a152f22a40ff69d92cb397223c906017e1391a73c952b588e51af8883bf8 AS runtime
 
 ENV DEBIAN_FRONTEND=noninteractive
 

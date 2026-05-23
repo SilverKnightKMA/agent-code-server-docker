@@ -38,17 +38,13 @@ export PATH
 if [ "${CODE_SERVER_OMP_DEBUG:-false}" = "true" ]; then
   echo "[debug] entrypoint user=$(id -un 2>/dev/null || echo unknown) uid=$(id -u) gid=$(id -g) groups=$(id -Gn 2>/dev/null || echo unknown)"
   echo "[debug] env USER=${USER:-unset} HOME=${HOME:-unset} DOCKER_USER=${DOCKER_USER:-unset} ENABLE_DIND=${ENABLE_DIND:-unset} DOCKER_HOST=${DOCKER_HOST:-unset}"
-  echo "[debug] binaries docker=$(command -v docker 2>/dev/null || echo missing) dockerd=$(command -v dockerd 2>/dev/null || echo missing) fixuid=$(command -v fixuid 2>/dev/null || echo missing) sudo=$(command -v sudo 2>/dev/null || echo missing)"
+  echo "[debug] binaries docker=$(command -v docker 2>/dev/null || echo missing) dockerd=$(command -v dockerd 2>/dev/null || echo missing) fixuid=$(command -v fixuid 2>/dev/null || echo missing) gosu=$(command -v gosu 2>/dev/null || echo missing) sudo=$(command -v sudo 2>/dev/null || echo missing)"
 fi
 
 # ── Optional: Docker-in-Docker (must run as root, before fixuid) ───────────
 if [ "${ENABLE_DIND:-false}" = "true" ]; then
   if [ "$(id -u)" -ne 0 ]; then
-    if command -v sudo >/dev/null 2>&1; then
-      echo "[dind] ENABLE_DIND=true requires root; re-executing entrypoint through sudo..."
-      exec sudo -E /usr/local/bin/code-server-omp-entrypoint "$@"
-    fi
-    echo "[dind] ENABLE_DIND=true requires root entrypoint and sudo is unavailable" >&2
+    echo "[dind] ENABLE_DIND=true requires the container to start as root. Add 'user: root' to docker-compose.yml for DinD deployments." >&2
     exit 1
   fi
 
@@ -83,13 +79,11 @@ eval "$(fixuid -q)"
 
 
 # ── Optional: DOCKER_USER remapping ────────────────────────────────────────
-if [ "${DOCKER_USER-}" ]; then
+if [ "${DOCKER_USER-}" ] && [ "$(id -u)" -eq 0 ]; then
   USER="$DOCKER_USER"
   if [ -z "$(id -u "$DOCKER_USER" 2>/dev/null)" ]; then
-    echo "$DOCKER_USER ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers.d/nopasswd > /dev/null
-    sudo usermod --login "$DOCKER_USER" coder
-    sudo groupmod -n "$DOCKER_USER" coder
-    sudo sed -i "/coder/d" /etc/sudoers.d/nopasswd
+    usermod --login "$DOCKER_USER" coder
+    groupmod -n "$DOCKER_USER" coder
   fi
 fi
 
@@ -97,7 +91,7 @@ fi
 if [ "${CODE_SERVER_OMP_AUTOINSTALL:-false}" = "true" ]; then
   echo "[managed-tools] installing missing or outdated managed tools..."
   if [ "$(id -u)" -eq 0 ]; then
-    sudo -E -u "${USER:-coder}" env PATH="${PATH}" npm run --prefix /opt/code-server-omp/managed-tools managed-tools:init
+    gosu "${USER:-coder}" env PATH="${PATH}" npm run --prefix /opt/code-server-omp/managed-tools managed-tools:init
   else
     npm run --prefix /opt/code-server-omp/managed-tools managed-tools:init
   fi
@@ -114,7 +108,7 @@ fi
 # ── Launch code-server ─────────────────────────────────────────────────────
 # Drop privileges if running as root, then start code-server.
 if [ "$(id -u)" -eq 0 ]; then
-  exec sudo -E -u "${USER:-coder}" env PATH="${PATH}" dumb-init /usr/bin/code-server --bind-addr 0.0.0.0:8080 "$@"
+  exec gosu "${USER:-coder}" dumb-init /usr/bin/code-server --bind-addr 0.0.0.0:8080 "$@"
 fi
 
 exec dumb-init /usr/bin/code-server --bind-addr 0.0.0.0:8080 "$@"

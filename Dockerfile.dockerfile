@@ -82,6 +82,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pip \
     python3-venv \
     rsync \
+    gosu \
     sudo \
     tar \
     unzip \
@@ -111,9 +112,7 @@ RUN curl -fsSL https://nodejs.org/dist/v24.16.0/node-v24.16.0-linux-x64.tar.xz \
     | tar -C /usr/local --strip-components=1 -xJf -
 
 # ── User setup ──────────────────────────────────────────────────────
-RUN adduser --gecos '' --disabled-password --uid 1000 coder \
-  && echo "coder ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/nopasswd \
-  && chmod 0440 /etc/sudoers.d/nopasswd
+RUN adduser --gecos '' --disabled-password --uid 1000 coder
 
 # ── fixuid for host UID mapping ─────────────────────────────────────
 RUN ARCH="$(dpkg --print-architecture)" \

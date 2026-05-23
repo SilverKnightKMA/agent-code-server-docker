@@ -177,7 +177,7 @@ jobs:
               echo "  MISSING: no check run found for '${check_name}'"
               checks_ok=false
               failure_reason="${failure_reason} Required path-specific check '${check_name}' not found;"
-            elif [ "${conclusion}" != "SUCCESS" ]; then
+            elif [ "$(echo "${conclusion}" | tr '[:upper:]' '[:lower:]')" != "success" ]; then
               echo "  NOT SUCCESS: ${check_name} = ${conclusion}"
               checks_ok=false
               failure_reason="${failure_reason} Required path-specific check '${check_name}' is ${conclusion};"

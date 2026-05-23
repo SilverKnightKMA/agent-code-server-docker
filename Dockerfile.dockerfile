@@ -106,6 +106,9 @@ RUN dpkg -i /tmp/code-server.deb && rm /tmp/code-server.deb
 # ── oh-my-pi installation (baked) ───────────────────────────────────
 COPY --from=omp-builder /usr/local/bin/omp /usr/local/bin/omp
 COPY --from=omp-builder /root/.bun /root/.bun
+# Copy bun binary so it is available in system PATH (and entrypoint
+# profile.d adds $HOME/.bun/bin for the coder user)
+COPY --from=omp-builder /usr/local/bin/bun /usr/local/bin/bun
 
 # ── Node.js + npm (baked from official image) ───────────────────────
 # Pin to same version as Bun's Node for compatibility

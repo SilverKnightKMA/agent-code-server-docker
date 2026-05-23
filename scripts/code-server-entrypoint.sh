@@ -88,17 +88,15 @@ if [ "${DOCKER_USER-}" ] && [ "$(id -u)" -eq 0 ]; then
   fi
 
 
-# ── Ensure code-server config dirs exist ──────────────────────────────
-# Create as the target user via gosu, so bind-mounted parent dirs
-# keep their host ownership and subdirs inherit correctly.
-RUN_USER="${USER:-coder}"
-gosu "${RUN_USER}" sh -c '
-  mkdir -p \
-    "${HOME}/.config/code-server" \
-    "${HOME}/.local/share/code-server" \
-    "${HOME}/.cache/code-server" \
-    2>/dev/null || true
-' 2>/dev/null || true
+# ── Ensure code-server config dirs (create as root for bind mounts) ───
+# Bind-mounted volumes retain host ownership; root can create subdirs.
+# Without this, code-server running as coder gets EACCES.
+mkdir -p /home/coder/.config/code-server \
+         /home/coder/.local/share/code-server \
+         /home/coder/.cache/code-server 2>/dev/null || true
+chown -R coder:coder /home/coder/.config/code-server \
+                     /home/coder/.local/share/code-server \
+                     /home/coder/.cache/code-server 2>/dev/null || true
 
 # ── Optional: managed tools autoinstall ────────────────────────────────────
 if [ "${CODE_SERVER_OMP_AUTOINSTALL:-false}" = "true" ]; then

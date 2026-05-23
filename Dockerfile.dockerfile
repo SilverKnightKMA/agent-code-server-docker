@@ -163,6 +163,8 @@ RUN mkdir -p \
     /home/coder/.cache \
     /home/coder/.cargo/bin \
     /home/coder/.config \
+    /home/coder/.config/code-server \
+    /home/coder/.local/share/code-server \
     /home/coder/.go/bin \
     /home/coder/.local/bin \
     /home/coder/.local/go/bin \

@@ -139,17 +139,86 @@ jobs:
           fi
           echo "OK: no unresolved templates"
 
-      - name: Install all managed tools
+      - name: Install all managed tools (capture log)
         run: |
           echo "=== managed-tools:init ==="
-          npm run --silent managed-tools:init 2>&1
+          INIT_LOG="${HOME}/managed-tools-init.log"
+          npm run --silent managed-tools:init 2>&1 | tee "${INIT_LOG}"
           exit_code=$?
+          echo "INIT_LOG=${INIT_LOG}" >> "${GITHUB_ENV}"
           if [ $exit_code -ne 0 ]; then
             echo "FAIL: managed-tools:init exited with code $exit_code"
             exit $exit_code
           fi
           echo "OK: all tools installed"
         timeout-minutes: 30
+
+      - name: Audit init log for compliance
+        run: |
+          LOG="${INIT_LOG:?}"
+          if [ ! -f "${LOG}" ]; then
+            echo "FAIL: init log not found at ${LOG}"
+            exit 1
+          fi
+
+          failures=0
+
+          echo "--- Checking forbidden patterns ---"
+
+          if grep -q 'api.github.com/repos' "${LOG}"; then
+            echo "FAIL: init triggered GitHub API calls:"
+            grep 'api.github.com/repos' "${LOG}"
+            failures=$((failures + 1))
+          else
+            echo "OK: no GitHub API calls"
+          fi
+
+          for pattern in 'source=baked' 'fallback=yes' 'fallback=baked' 'fallback=cache'; do
+            if grep -q "${pattern}" "${LOG}"; then
+              echo "FAIL: init log contains forbidden '${pattern}':"
+              grep "${pattern}" "${LOG}"
+              failures=$((failures + 1))
+            else
+              echo "OK: no '${pattern}' in log"
+            fi
+          done
+
+          if grep -q '{version}' "${LOG}"; then
+            echo "FAIL: init log contains literal '{version}':"
+            grep '{version}' "${LOG}"
+            failures=$((failures + 1))
+          else
+            echo "OK: no literal {version} in log"
+          fi
+
+          for pattern in 'checksum verification skipped' 'checksum_asset missing' 'rate limit exceeded' 'rate.limit'; do
+            if grep -q "${pattern}" "${LOG}"; then
+              echo "FAIL: init log contains '${pattern}':"
+              grep "${pattern}" "${LOG}"
+              failures=$((failures + 1))
+            else
+              echo "OK: no '${pattern}' in log"
+            fi
+          done
+
+          echo ""
+          echo "--- Checking required checksum verification lines ---"
+
+          for tool in gh yq ripgrep actionlint hadolint rustup; do
+            if grep -q "\[verify\].*tool=${tool}" "${LOG}"; then
+              echo "OK: checksum verification found for ${tool}"
+            else
+              echo "FAIL: no checksum verification for ${tool}"
+              failures=$((failures + 1))
+            fi
+          done
+
+          echo ""
+          if [ "${failures}" -gt 0 ]; then
+            echo "FAIL: ${failures} compliance check(s) failed"
+            exit 1
+          fi
+          echo "OK: all compliance checks passed"
 
       - name: Verify all tools are installed (state=equal)
         run: |

@@ -128,12 +128,40 @@ export XDG_STATE_HOME="${RUN_HOME}/.local/state"
 # ── Sudo password (LinuxServer-style) ───────────────────────────────
 if [ -n "${SUDO_PASSWORD-}" ]; then
   echo "[entrypoint] configuring sudo for ${RUN_USER}..."
-  echo "${RUN_USER}:${SUDO_PASSWORD}" | chpasswd 2>/dev/null || \
-    echo "[warn] chpasswd failed" >&2
-  printf '%s ALL=(ALL) ALL\n' "${RUN_USER}" > /etc/sudoers.d/coder 2>/dev/null || \
+  _SUDO_FAILED=false
+
+  # Use printf (not echo) to avoid shell escape interpretation on the password.
+  # Reject newlines in password to prevent chpasswd injection.
+  case "${SUDO_PASSWORD}" in
+    *$'\n'*)
+      echo "[FAIL] SUDO_PASSWORD contains newline characters; rejecting" >&2
+      _SUDO_FAILED=true
+      ;;
+    *)
+      printf '%s:%s\n' "${RUN_USER}" "${SUDO_PASSWORD}" | chpasswd 2>/dev/null || {
+        echo "[warn] chpasswd failed" >&2
+        _SUDO_FAILED=true
+      }
+      ;;
+  esac
+
+  # Write sudoers with correct ownership and permissions (0440).
+  # sudo silently ignores files in sudoers.d that are not root:root 0440.
+  printf '%s ALL=(ALL) ALL\n' "${RUN_USER}" > /etc/sudoers.d/coder 2>/dev/null || {
     echo "[warn] failed to create /etc/sudoers.d/coder" >&2
-  echo "[entrypoint] sudo enabled for ${RUN_USER}"
+    _SUDO_FAILED=true
+  }
+  chown root:root /etc/sudoers.d/coder 2>/dev/null || _SUDO_FAILED=true
+  chmod 0440 /etc/sudoers.d/coder 2>/dev/null || _SUDO_FAILED=true
+
+  if [ "${_SUDO_FAILED}" = "false" ]; then
+    echo "[entrypoint] sudo enabled for ${RUN_USER}"
+  else
+    echo "[warn] sudo configuration incomplete — user ${RUN_USER} may not have working sudo" >&2
+  fi
+  unset _SUDO_FAILED
 fi
+
 
 # ── Docker group membership ─────────────────────────────────────────
 if [ "${ENABLE_DIND:-false}" = "true" ] && getent group docker >/dev/null 2>&1; then

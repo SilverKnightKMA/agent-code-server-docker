@@ -73,6 +73,9 @@ jobs:
           elif [ "${PR_AUTHOR}" = "github-actions[bot]" ] || [ "${PR_AUTHOR}" = "app/github-actions" ]; then
             trusted=true
             reason="GitHub Actions workflow PR"
+          elif echo "${PR_AUTHOR}" | grep -q "\[bot\]$"; then
+            trusted=true
+            reason="GitHub App bot PR (${PR_AUTHOR})"
           fi
 
           has_automated_label=false

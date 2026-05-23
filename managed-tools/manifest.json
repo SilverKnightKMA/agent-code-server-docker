@@ -53,7 +53,7 @@
       "checksumFormat": "sha256sum",
       "checksumPolicy": "requireUpstreamChecksum",
       "tools": [
-        { "name": "gh", "version": "2.77.0", "repo": "cli/cli", "os": "linux", "arch": "amd64", "assetPattern": "gh_{version}_linux_amd64.tar.gz", "binPath": "gh_{version}_linux_amd64/bin/gh", "checksumAsset": "gh_{version}_checksums.txt", "releaseTag": "v{version}", "assetUrl": "https://github.com/cli/cli/releases/download/{releaseTag}/gh_{version}_linux_amd64.tar.gz", "checksumUrl": "https://github.com/cli/cli/releases/download/{releaseTag}/gh_{version}_checksums.txt" }
+        { "name": "gh", "version": "2.77.0", "repo": "cli/cli", "os": "linux", "arch": "amd64", "assetPattern": "gh_{version}_linux_amd64.tar.gz", "binPath": "gh_{version}_linux_amd64/bin/gh", "checksumAsset": "gh_{version}_checksums.txt", "releaseTag": "v{version}", "assetUrl": "https://github.com/cli/cli/releases/download/v{version}/gh_{version}_linux_amd64.tar.gz", "checksumUrl": "https://github.com/cli/cli/releases/download/v{version}/gh_{version}_checksums.txt" }
       ]
     },
     "release_binaries": {

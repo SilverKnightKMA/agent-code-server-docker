@@ -63,6 +63,7 @@ jobs:
           PR_HEAD_REF: ${{ steps.pr.outputs.headRefName }}
           PR_LABELS: ${{ steps.pr.outputs.labels }}
           PR_IS_DRAFT: ${{ steps.pr.outputs.isDraft }}
+          AUTOMATION_BOT_LOGIN: ${{ vars.AUTOMATION_BOT_LOGIN }}
         run: |
           trusted=false
           reason="PR is not from a trusted automation source"
@@ -70,9 +71,9 @@ jobs:
           if [ "${PR_AUTHOR}" = "dependabot[bot]" ] || [ "${PR_AUTHOR}" = "app/dependabot" ]; then
             trusted=true
             reason="Dependabot PR"
-          elif [ "${PR_AUTHOR}" = "github-actions[bot]" ] || [ "${PR_AUTHOR}" = "app/github-actions" ]; then
+          elif [ -n "${AUTOMATION_BOT_LOGIN}" ] && [ "${PR_AUTHOR}" = "${AUTOMATION_BOT_LOGIN}" ]; then
             trusted=true
-            reason="GitHub Actions workflow PR"
+            reason="Configured automation bot PR"
           fi
 
           has_automated_label=false

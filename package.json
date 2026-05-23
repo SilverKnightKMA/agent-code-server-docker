@@ -30,5 +30,10 @@
     "typescript-language-server": "5.3.0",
     "yaml-language-server": "1.23.0",
     "bash-language-server": "5.6.0"
+  },
+  "overrides": {
+    "editorconfig": {
+      "minimatch": "10.2.5"
+    }
   }
 }

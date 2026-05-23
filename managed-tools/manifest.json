@@ -53,7 +53,7 @@
       "checksumFormat": "sha256sum",
       "checksumPolicy": "requireUpstreamChecksum",
       "tools": [
-        { "name": "gh", "version": "2.77.0", "repo": "cli/cli", "os": "linux", "arch": "amd64", "assetPattern": "gh_{version}_linux_amd64.tar.gz", "binPath": "gh_{version}_linux_amd64/bin/gh", "checksumAsset": "gh_{version}_checksums.txt" }
+        { "name": "gh", "version": "2.77.0", "repo": "cli/cli", "os": "linux", "arch": "amd64", "assetPattern": "gh_{version}_linux_amd64.tar.gz", "binPath": "gh_{version}_linux_amd64/bin/gh", "checksumAsset": "gh_{version}_checksums.txt", "releaseTag": "v{version}", "assetUrl": "https://github.com/cli/cli/releases/download/{releaseTag}/gh_{version}_linux_amd64.tar.gz", "checksumUrl": "https://github.com/cli/cli/releases/download/{releaseTag}/gh_{version}_checksums.txt" }
       ]
     },
     "release_binaries": {
@@ -70,7 +70,10 @@
           "assetPattern": "yq_linux_amd64",
           "checksumAsset": "checksums",
           "checksumFormat": "yq-checksums",
-          "checksumPolicy": "requireUpstreamChecksum"
+          "checksumPolicy": "requireUpstreamChecksum",
+          "releaseTag": "v{version}",
+          "assetUrl": "https://github.com/mikefarah/yq/releases/download/v{version}/yq_linux_amd64",
+          "checksumUrl": "https://github.com/mikefarah/yq/releases/download/v{version}/checksums"
         },
         {
           "name": "ripgrep",
@@ -80,7 +83,10 @@
           "checksumAsset": "ripgrep-{version}-x86_64-unknown-linux-musl.tar.gz.sha256",
           "checksumFormat": "sha256sum",
           "checksumPolicy": "requireUpstreamChecksum",
-          "binPath": "ripgrep-{version}-x86_64-unknown-linux-musl/rg"
+          "binPath": "ripgrep-{version}-x86_64-unknown-linux-musl/rg",
+          "releaseTag": "{version}",
+          "assetUrl": "https://github.com/BurntSushi/ripgrep/releases/download/{version}/ripgrep-{version}-x86_64-unknown-linux-musl.tar.gz",
+          "checksumUrl": "https://github.com/BurntSushi/ripgrep/releases/download/{version}/ripgrep-{version}-x86_64-unknown-linux-musl.tar.gz.sha256"
         },
         {
           "name": "actionlint",
@@ -89,7 +95,10 @@
           "assetPattern": "actionlint_{version}_linux_amd64.tar.gz",
           "checksumAsset": "actionlint_{version}_checksums.txt",
           "checksumFormat": "sha256sum",
-          "checksumPolicy": "requireUpstreamChecksum"
+          "checksumPolicy": "requireUpstreamChecksum",
+          "releaseTag": "v{version}",
+          "assetUrl": "https://github.com/rhysd/actionlint/releases/download/v{version}/actionlint_{version}_linux_amd64.tar.gz",
+          "checksumUrl": "https://github.com/rhysd/actionlint/releases/download/v{version}/actionlint_{version}_checksums.txt"
         },
         {
           "name": "hadolint",
@@ -98,7 +107,10 @@
           "assetPattern": "hadolint-linux-x86_64",
           "checksumAsset": "hadolint-linux-x86_64.sha256",
           "checksumFormat": "sha256sum",
-          "checksumPolicy": "requireUpstreamChecksum"
+          "checksumPolicy": "requireUpstreamChecksum",
+          "releaseTag": "v{version}",
+          "assetUrl": "https://github.com/hadolint/hadolint/releases/download/v{version}/hadolint-linux-x86_64",
+          "checksumUrl": "https://github.com/hadolint/hadolint/releases/download/v{version}/hadolint-linux-x86_64.sha256"
         }
       ]
     },

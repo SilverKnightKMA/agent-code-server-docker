@@ -157,6 +157,11 @@ function checksumUrl(tool) {
   return urlPattern ? expandTemplate(urlPattern, tool) : null;
 }
 
+function releaseAssetUrl(tool) {
+  const urlPattern = releaseSetting(tool, "assetUrl");
+  return urlPattern ? expandTemplate(urlPattern, tool) : null;
+}
+
 function checksumFormat(tool) {
   return releaseSetting(tool, "checksumFormat") ?? "sha256sum";
 }
@@ -271,12 +276,41 @@ function sha256FromJsonl(text, selectedAssetName) {
   return null;
 }
 
-async function download(url, destination, fields = {}) {
-  console.log(`[download] ${formatFields({ ...fields, target: destination })}`);
-  const response = await fetch(url, { headers: { Accept: "application/octet-stream", "User-Agent": "openchamber-managed-tools" } });
-  if (!response.ok) throw new Error(`failed to download ${url}: ${response.status} ${response.statusText}`);
-  await pipeline(response.body, createWriteStream(destination));
-  console.log(`[download] ${formatFields({ ...fields, target: destination, status: "complete" })}`);
+async function download(url, destination, fields = {}, { retries = 3, timeoutMs = 60000 } = {}) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    if (attempt > 1) {
+      const delayMs = Math.min(1000 * 2 ** (attempt - 1), 10000);
+      console.log(`[retry] ${formatFields({ ...fields, attempt, max_retries: retries, delay_ms: delayMs, target: destination })}`);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      console.log(`[download] ${formatFields({ ...fields, target: destination, attempt })}`);
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: { Accept: "application/octet-stream", "User-Agent": "openchamber-managed-tools" },
+      });
+      if (!response.ok) {
+        lastError = new Error(`failed to download ${url}: ${response.status} ${response.statusText}`);
+        continue;
+      }
+      await pipeline(response.body, createWriteStream(destination));
+      console.log(`[download] ${formatFields({ ...fields, target: destination, status: "complete" })}`);
+      return;
+    } catch (error) {
+      if (error.name === "AbortError") {
+        lastError = new Error(`download timed out after ${timeoutMs}ms: ${url}`);
+      } else {
+        lastError = error;
+      }
+      continue;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  throw lastError ?? new Error(`download failed: ${url}`);
 }
 
 async function sha256File(filePath) {
@@ -324,6 +358,36 @@ async function expectedSha256(tool, release) {
     if (match) return match[1].toLowerCase();
   }
   throw new Error(`${tool.name} checksum for ${assetName(tool)} not found in ${checksum ?? checksumSource}`);
+}
+
+async function expectedSha256Direct(tool) {
+  const checksumDownloadUrl = checksumUrl(tool);
+  if (!checksumDownloadUrl) throw new Error(`${tool.name} direct checksum URL missing`);
+  console.log(`[verify] ${formatFields({
+    tool: tool.name,
+    asset: assetName(tool),
+    checksum_asset: checksumDownloadUrl,
+    checksum_format: checksumFormat(tool),
+    target: "checksum-source",
+  })}`);
+  const response = await fetch(checksumDownloadUrl, { headers: { Accept: "application/octet-stream", "User-Agent": "openchamber-managed-tools" } });
+  if (!response.ok) throw new Error(`failed to download checksum from ${checksumDownloadUrl}: ${response.status} ${response.statusText}`);
+  const text = await response.text();
+  if (checksumFormat(tool) === "jsonl-sha256") {
+    const digest = sha256FromJsonl(text, assetName(tool));
+    if (digest) return digest;
+  }
+  if (tool.name === "yq") {
+    const line = text.split(/\r?\n/).find((entry) => entry.startsWith(`${assetName(tool)} `));
+    const parts = line?.trim().split(/\s+/) ?? [];
+    if (parts[18]) return parts[18].toLowerCase();
+  }
+  for (const line of text.split(/\r?\n/)) {
+    if (!line.includes(assetName(tool))) continue;
+    const match = line.match(/([a-f0-9]{64})/i);
+    if (match) return match[1].toLowerCase();
+  }
+  throw new Error(`${tool.name} checksum for ${assetName(tool)} not found in ${checksumDownloadUrl}`);
 }
 
 async function extractArchive(archivePath, extractDir) {
@@ -459,7 +523,47 @@ async function installReleaseTool(tool) {
     console.warn(`[warn] ${tool.name} version unparseable from release binary; skip`);
     return;
   }
+  const assetUrl = releaseAssetUrl(tool);
 
+  if (assetUrl) {
+    // Direct URL path — no GitHub API needed
+    const assetNameStr = assetName(tool);
+    console.log(`[fetch] ${formatFields({
+      tool: tool.name,
+      release_tag: releaseSetting(tool, "releaseTag") ?? `v${tool.version}`,
+      asset: assetNameStr,
+      target: installPath(tool),
+    })}`);
+    const expected = await expectedSha256Direct(tool);
+    const tempDir = await makeTempDir("managed-release-");
+    const archivePath = path.join(tempDir, assetNameStr);
+    try {
+      await download(assetUrl, archivePath, { tool: tool.name, asset: assetNameStr });
+      const actual = await sha256File(archivePath);
+      if (actual !== expected) throw new Error(`${tool.name} sha256 mismatch: expected ${expected}, got ${actual}`);
+      console.log(`[verify] ${formatFields({ tool: tool.name, asset: assetNameStr, sha256: expected, target: archivePath })}`);
+      const source = await extractedBinary(tool, archivePath, tempDir);
+      await mkdir(path.dirname(installPath(tool)), { recursive: true });
+      const installedRoot = await installTreeRoot(tool, path.join(tempDir, "extract"));
+      const binarySource = installedRoot ? installRootBinaryPath(tool) : source;
+      if (!binarySource) throw new Error(`${tool.name} install binary path missing`);
+      console.log(`[install] ${formatFields({ tool: tool.name, version: tool.version, source: binarySource, target: installPath(tool) })}`);
+      await rm(installPath(tool), { recursive: true, force: true });
+      if (installedRoot) {
+        await symlink(binarySource, installPath(tool));
+      } else {
+        await copyFile(binarySource, installPath(tool));
+        await chmod(installPath(tool), 0o755);
+      }
+      if (!isDirectBinaryAsset(tool) && !installedRoot) await installSupportPaths(tool, path.join(tempDir, "extract"));
+      console.log(`[install] ${tool.name} ${tool.version} installed to ${installPath(tool)}`);
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+    return;
+  }
+
+  // Fallback: GitHub API release metadata discovery
   const release = await githubRelease(tool);
   const asset = release.assets?.find((entry) => entry.name === assetName(tool));
   if (!asset) throw new Error(`${tool.name} asset missing from release metadata`);
@@ -499,6 +603,19 @@ async function installReleaseTool(tool) {
 }
 
 async function validateReleaseMetadata(tool) {
+  const assetUrl = releaseAssetUrl(tool);
+  if (assetUrl) {
+    const assetNameStr = assetName(tool);
+    const expected = await expectedSha256Direct(tool);
+    console.log(`[fetch] ${formatFields({
+      tool: tool.name,
+      release_tag: releaseSetting(tool, "releaseTag") ?? `v${tool.version}`,
+      asset: assetNameStr,
+      target: "metadata",
+    })}`);
+    console.log(`[verify] ${formatFields({ tool: tool.name, asset: assetNameStr, sha256: expected, target: "metadata" })}`);
+    return;
+  }
   const release = await githubRelease(tool);
   const asset = release.assets?.find((entry) => entry.name === assetName(tool));
   if (!asset) throw new Error(`${tool.name} asset missing from release metadata`);
@@ -508,7 +625,8 @@ async function validateReleaseMetadata(tool) {
     release_tag: release.tag_name ?? tool.version,
     asset: asset.name,
     size: asset.size,
-    target: "metadata",
+    lz: "metadata",
+    pt: "metadata",
   })}`);
   console.log(`[verify] ${formatFields({ tool: tool.name, asset: assetName(tool), sha256: expected, target: "metadata" })}`);
 }

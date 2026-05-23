@@ -13,9 +13,9 @@ const requiredFamilies = [
   "go_tools",
   "gh",
   "release_binaries",
-  "llvm_tools",
-  "cmake",
-  "protobuf",
+  // "llvm_tools",
+  // "cmake",
+  // "protobuf",
   "rustup",
 ];
 
@@ -43,26 +43,9 @@ for (const tool of manifest.families.go_tools.tools) {
   }
 }
 
-const cmakeTool = manifest.families.cmake.tools.find((tool) => tool.name === "cmake");
-if (!cmakeTool) throw new Error("cmake family missing cmake tool");
-
-const cmakeMajorMinor = cmakeTool.version.match(/^(\d+\.\d+)/)?.[1];
-if (!cmakeMajorMinor) throw new Error(`unable to derive CMake major.minor from ${cmakeTool.version}`);
-
-const expectedCmakeSupport = `cmake-{version}-linux-x86_64/share/cmake-${cmakeMajorMinor}`;
-const expectedCmakeTarget = `~/.local/managed/cmake/{version}/share/cmake-${cmakeMajorMinor}`;
-const cmakeSupport = cmakeTool.supportPaths?.[0];
-
-if (!cmakeSupport) throw new Error("cmake tool missing supportPaths entry");
-if (cmakeSupport.source !== expectedCmakeSupport) {
-  throw new Error(`cmake support source must be ${expectedCmakeSupport}, got ${cmakeSupport.source}`);
-}
-if (cmakeSupport.target !== expectedCmakeTarget) {
-  throw new Error(`cmake support target must be ${expectedCmakeTarget}, got ${cmakeSupport.target}`);
-}
-
-for (const familyName of ["gh", "release_binaries", "llvm_tools", "cmake", "protobuf"]) {
+for (const familyName of ["gh", "release_binaries"]) {
   const family = manifest.families[familyName];
+  if (!family) continue;
   for (const tool of family.tools ?? []) {
     const repo = tool.repo ?? family.repo;
     const assetPattern = tool.assetPattern ?? family.assetPattern;

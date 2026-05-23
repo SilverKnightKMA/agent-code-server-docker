@@ -16,23 +16,26 @@ services:
       # CODE_SERVER_OMP_AUTOINSTALL: "true"
       # UI_PASSWORD: change-me
 
-      # Docker-in-Docker. If enabled, also uncomment:
-      #   privileged: true
-      #   security_opt no-new-privileges:false
-      #   /var/lib/docker and /var/lib/containerd volume mounts
+      # Docker-in-Docker. Uncomment these blocks to enable:
       # ENABLE_DIND: "true"
+      # (also uncomment privileged, security_opt, and /var/lib/docker volumes below)
 
     restart: unless-stopped
     volumes:
-      # Workspace
+      # === Workspace ===
       - ./data/workspaces:/home/coder/workspaces
 
-      # Auth & identity
+      # === Auth & identity ===
       - ./data/ssh:/home/coder/.ssh
       - ./data/config/git:/home/coder/.config/git
       - ./data/config/gh:/home/coder/.config/gh
 
-      # Managed/custom mounted tools
+      # === Dedicated code-server state ===
+      - ./data/config/code-server:/home/coder/.config/code-server
+      - ./data/code-server-data:/home/coder/.local/share/code-server
+      - ./data/code-server-cache:/home/coder/.cache/code-server
+
+      # === Managed / custom mounted tools (Tier 2 + 3) ===
       - ./data/npm-global:/home/coder/.npm-global
       - ./data/bun:/home/coder/.bun
       - ./data/local-bin:/home/coder/.local/bin
@@ -42,17 +45,17 @@ services:
       - ./data/rustup:/home/coder/.rustup
       - ./data/go:/home/coder/.go
 
-      # Managed cache
+      # === Managed tools cache ===
       - ./data/code-server-omp-cache:/home/coder/.local/state/code-server-omp
 
-      # Optional startup scripts
+      # === Optional startup scripts ===
       # - ./data/entrypoint.d:/home/coder/entrypoint.d
 
-      # Optional Docker-in-Docker state. Uncomment only with ENABLE_DIND=true.
+      # === Optional Docker-in-Docker state (uncomment with ENABLE_DIND=true) ===
       # - ./data/docker:/var/lib/docker
       # - ./data/containerd:/var/lib/containerd
 
-    # Optional Docker-in-Docker runtime privileges. Uncomment only with ENABLE_DIND=true.
+    # === Optional Docker-in-Docker runtime (uncomment with ENABLE_DIND=true) ===
     # privileged: true
     # security_opt:
     #   - no-new-privileges:false

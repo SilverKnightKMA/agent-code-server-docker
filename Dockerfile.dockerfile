@@ -113,7 +113,9 @@ RUN curl -fsSL https://nodejs.org/dist/v24.16.0/node-v24.16.0-linux-x64.tar.xz \
     | tar -C /usr/local --strip-components=1 -xJf -
 
 # ── User setup ──────────────────────────────────────────────────────
-RUN adduser --gecos '' --disabled-password --uid 1000 coder
+RUN adduser --gecos '' --disabled-password --uid 1000 coder \
+  && groupadd -r docker \
+  && usermod -aG docker coder
 
 # ── fixuid for host UID mapping ─────────────────────────────────────
 RUN ARCH="$(dpkg --print-architecture)" \

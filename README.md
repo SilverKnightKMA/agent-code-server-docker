@@ -1,100 +1,115 @@
 # code-server-omp-docker
 
-code-server (VS Code trong browser) + oh-my-pi (omp coding agent) trong một Docker image, với kiến trúc 3-tier tool.
+code-server (VS Code trong browser) + oh-my-pi (omp coding agent) trong một Docker image, với kiến trúc 3-tier tool và DinD tùy chọn.
 
 ## Yêu cầu
 
-- Docker Engine + Docker Compose (hoặc Docker Desktop)
-- ~4GB RAM cho container, ~2GB disk cho image
+- Docker Engine + Docker Compose
+- ~4GB RAM, ~2GB disk
 
 ## Quick start
 
 ```bash
-# Clone repo
 git clone https://github.com/SilverKnightKMA/code-server-omp-docker.git
 cd code-server-omp-docker
 
-# Tạo data directories
-mkdir -p data/workspaces \
-  data/ssh data/config/git data/config/gh \
-  data/npm-global data/bun data/local-bin data/local-go \
-  data/local-pip data/cargo data/rustup data/go \
-  data/code-server-omp-cache
+# 1. Tạo toàn bộ data directories
+bash <(cat <<'DIRS'
+mkdir -p \
+  data/workspaces \
+  data/ssh \
+  data/config/git data/config/gh data/config/code-server \
+  data/code-server-data data/code-server-cache \
+  data/npm-global data/bun \
+  data/local-bin data/local-go data/local-pip \
+  data/cargo data/rustup data/go \
+  data/code-server-omp-cache \
+  data/entrypoint.d
+DIRS
+)
 
-# Build image
+# 2. Set ownership (UID 1000 = coder trong container)
+# Bỏ qua nếu data/ chưa tồn tại; chạy sau khi tạo lần đầu.
+sudo chown -R 1000:1000 \
+  data/workspaces \
+  data/ssh \
+  data/config data/code-server-data data/code-server-cache \
+  data/npm-global data/bun \
+  data/local-bin data/local-go data/local-pip \
+  data/cargo data/rustup data/go \
+  data/code-server-omp-cache \
+  data/entrypoint.d
+
+# KHÔNG chown /var/lib/docker hoặc /var/lib/containerd
+
+# 3. Build image
 docker compose build
 
-# Start container
+# 4. Start container
 docker compose up -d
 
-# Mở http://localhost:8080
+# 5. Mở http://localhost:8880
+```
+
+## Host-side preparation (chi tiết)
+
+### Tạo data directories
+
+Tất cả volume mounts cần thư mục host tương ứng. Nếu thiếu, Docker tự tạo với quyền
+`root:root`. Khi container chạy với `user: root` (bắt buộc cho DinD), entrypoint
+sẽ tạo subdirs và chown chúng. Nhưng host-prep giúp tránh lỗi ngay từ đầu.
+
+### Set ownership
+
+UID 1000 trong container là `coder`. Để bind-mounted directories có thể write:
+
+```bash
+sudo chown 1000:1000 \
+  data/workspaces \
+  data/config data/code-server-data data/code-server-cache \
+  data/npm-global data/bun \
+  data/local-bin data/local-go data/local-pip \
+  data/cargo data/rustup data/go \
+  data/code-server-omp-cache \
+  data/entrypoint.d
+```
+
+### SSH keys
+
+```bash
+cp -r ~/.ssh/* data/ssh/
+chmod 600 data/ssh/*
+chown -R 1000:1000 data/ssh
+```
+
+### Git config
+
+```bash
+cp ~/.gitconfig data/config/git/config
+chown -R 1000:1000 data/config/git
 ```
 
 ## Sau khi container chạy
 
-### Bước 1: Kiểm tra container
-
 ```bash
-docker compose logs -f          # Xem log
-docker compose ps               # Kiểm tra trạng thái
+docker compose logs -f                    # Theo dõi log
+docker compose exec -u coder code-server-omp bash   # Vào container
 ```
 
-### Bước 2: Vào container
+### Kiểm tra DinD
 
 ```bash
-docker compose exec -it code-server-omp bash
+docker compose exec code-server-omp docker info
+docker compose exec code-server-omp docker compose version
 ```
 
-### Bước 3: Cài managed tools (tùy chọn)
+## Docker-in-Docker
 
-```bash
-# Trong container:
-cd /opt/code-server-omp/managed-tools
+Mặc định container chạy với `USER root`; entrypoint tự start DinD nếu có env.
+code-server luôn chạy dưới user `coder` qua `gosu`.
 
-# Xem trạng thái
-npm run managed-tools:status
+Bật DinD bằng cách uncomment trong `docker-compose.yml`:
 
-# Cài npm tools (TypeScript LSP, ESLint, Prettier, ...)
-npm run managed-tools:npm:init
-
-# Cài Go toolchain + gopls + shfmt
-npm run managed-tools:go:init
-
-# Cài release binaries (gh, yq, ripgrep, actionlint, hadolint)
-npm run managed-tools:mounted:init
-
-# Cài tất cả
-npm run managed-tools:init
-```
-
-### Bước 4: Auth GitHub CLI
-
-```bash
-# Trong container:
-gh auth login
-```
-
-### Bước 5: Config SSH + Git
-
-```bash
-# Trên host (trước khi start container):
-# Copy SSH keys vào mounted volume
-cp -r ~/.ssh/* ./data/ssh/
-chmod 600 ./data/ssh/*
-
-# Copy git config
-cp ~/.gitconfig ./data/config/git/config
-```
-
-## Tính năng nâng cao
-
-### Docker-in-Docker
-
-Image entrypoint chạy bằng root giống OpenChamber, nhưng code-server luôn được chạy bằng user `coder` qua `gosu`. User `coder` không có passwordless sudo.
-
-Nếu **không bật DinD**, không cần `privileged` và workload vẫn chạy dưới `coder`.
-
-Chỉ khi bật DinD, uncomment đủ các dòng sau trong `docker-compose.yml`:
 ```yaml
 environment:
   ENABLE_DIND: "true"
@@ -109,18 +124,28 @@ volumes:
   - ./data/containerd:/var/lib/containerd
 ```
 
-Luồng khi bật DinD: entrypoint root → start `dockerd` → `fixuid`/user remap → drop về `coder` → chạy code-server.
+Container phải chạy với root để dockerd start. `coder` được thêm vào group `docker`
+để dùng `docker info` mà không cần sudo.
 
-### Auto-install managed tools khi start
+Không bật DinD → không cần privileged, workload chạy an toàn.
 
-```yaml
-environment:
-  CODE_SERVER_OMP_AUTOINSTALL: "true"
+## Diagnostics
+
+Nếu vẫn gặp lỗi EACCES, vào container:
+
+```bash
+docker compose exec code-server-omp bash -c 'id; ls -ldn /home/coder /home/coder/.config /home/coder/.local /home/coder/.cache /home/coder/.config/code-server'
 ```
 
-### Entrypoint.d scripts
-
-Mount scripts vào `/home/coder/entrypoint.d/` — chúng sẽ chạy mỗi khi container start.
+Expected output:
+```
+uid=1000(coder) gid=1000(coder) groups=1000(coder),xxx(docker)
+drwxr-xr-x 0 0 ... /home/coder
+drwxr-xr-x 1000 1000 ... /home/coder/.config
+drwxr-xr-x 1000 1000 ... /home/coder/.config/code-server
+drwxr-xr-x 1000 1000 ... /home/coder/.local
+drwxr-xr-x 1000 1000 ... /home/coder/.cache
+```
 
 ## Kiến trúc 3-tier
 
@@ -132,8 +157,4 @@ Mount scripts vào `/home/coder/entrypoint.d/` — chúng sẽ chạy mỗi khi 
 
 ## Ports
 
-- `8080`: code-server web UI
-
-## Backup omp config
-
-Sao lưu `~/.omp/` (auth keys, model config) — xem `omp-backup/restore.sh` trong repo local (không push lên GitHub).
+- `8080` (mặc định), map qua `8880` trong compose mẫu

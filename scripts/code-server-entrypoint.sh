@@ -87,11 +87,12 @@ fi
 if [ "${CODE_SERVER_OMP_AUTOINSTALL:-false}" = "true" ]; then
   echo "[managed-tools] installing missing or outdated managed tools..."
   if [ "$(id -u)" -eq 0 ]; then
-    sudo -E -u coder env PATH="${PATH}" npm run --prefix /opt/code-server-omp/managed-tools managed-tools:init
+    sudo -E -u "${USER:-coder}" env PATH="${PATH}" npm run --prefix /opt/code-server-omp/managed-tools managed-tools:init
   else
     npm run --prefix /opt/code-server-omp/managed-tools managed-tools:init
   fi
 fi
+
 
 # ── Entrypoint.d user hooks ────────────────────────────────────────────────
 # Users can mount executable scripts into /home/coder/entrypoint.d/
@@ -103,7 +104,7 @@ fi
 # ── Launch code-server ─────────────────────────────────────────────────────
 # Drop privileges if running as root, then start code-server.
 if [ "$(id -u)" -eq 0 ]; then
-  exec sudo -E -u coder env PATH="${PATH}" dumb-init /usr/bin/code-server --bind-addr 0.0.0.0:8080 "$@"
+  exec sudo -E -u "${USER:-coder}" env PATH="${PATH}" dumb-init /usr/bin/code-server --bind-addr 0.0.0.0:8080 "$@"
 fi
 
 exec dumb-init /usr/bin/code-server --bind-addr 0.0.0.0:8080 "$@"

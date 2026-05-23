@@ -206,14 +206,8 @@ jobs:
         run: |
           echo "Auto-merge not enabled."
           echo "Reason: ${{ steps.path_check.outputs.failure_reason }}"
-
       - name: Update branch when behind
-        if: steps.policy.outputs.allowed == 'true' && steps.path_check.outputs.checks_ok == 'true' && steps.pr.outputs.mergeStateStatus == 'BEHIND'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
-        run: gh pr update-branch "${PR_NUMBER}" --repo "${GH_REPO}"
+        if: false
 
       - name: Enable auto-merge
         if: steps.policy.outputs.allowed == 'true' && steps.path_check.outputs.checks_ok == 'true'

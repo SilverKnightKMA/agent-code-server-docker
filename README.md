@@ -13,8 +13,7 @@ code-server (VS Code trong browser) + oh-my-pi (omp coding agent) trong một Do
 git clone https://github.com/SilverKnightKMA/code-server-omp-docker.git
 cd code-server-omp-docker
 
-# 1. Tạo toàn bộ data directories
-bash <(cat <<'DIRS'
+# 1. Tạo toàn bộ data directories (bao gồm dedicated code-server mounts)
 mkdir -p \
   data/workspaces \
   data/ssh \
@@ -25,8 +24,6 @@ mkdir -p \
   data/cargo data/rustup data/go \
   data/code-server-omp-cache \
   data/entrypoint.d
-DIRS
-)
 
 # 2. Set ownership (UID 1000 = coder trong container)
 # Bỏ qua nếu data/ chưa tồn tại; chạy sau khi tạo lần đầu.

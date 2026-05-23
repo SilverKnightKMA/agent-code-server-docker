@@ -10,8 +10,6 @@ set -eu
 #   - Entrypoint.d user script hooks
 #   - Idempotent writable directory preparation for bind-mounted paths
 
-RC=0
-
 # ── Helper: prepend a directory to PATH, avoiding dupes ────────────────────
 prepend_path_dir() {
   clean_path=""
@@ -83,7 +81,7 @@ if [ "${ENABLE_DIND:-false}" = "true" ]; then
     echo "[dind] docker daemon already reachable"
   fi
 
-  # Make /var/run/docker.sock accessible to coder via docker group
+  # Make /var/run/docker.sock accessible to runtime user via docker group
   if [ -S /var/run/docker.sock ]; then
     chown root:docker /var/run/docker.sock
     chmod 0660 /var/run/docker.sock
@@ -99,14 +97,13 @@ if [ "${DOCKER_USER-}" ] && [ "$(id -u)" -eq 0 ]; then
   if [ -z "$(id -u "$DOCKER_USER" 2>/dev/null)" ]; then
     usermod --login "$DOCKER_USER" coder
     groupmod -n "$DOCKER_USER" coder
-    # Re-map docker group for the renamed user
     if getent group docker >/dev/null 2>&1; then
       usermod -aG docker "${DOCKER_USER}" 2>/dev/null || true
     fi
   fi
 fi
 
-# ── Resolve the runtime user (after DOCKER_USER remap or fixuid) ──────────
+# ── Resolve the runtime user/group (after DOCKER_USER remap or fixuid) ────
 if [ -n "${DOCKER_USER-}" ]; then
   RUN_USER="${DOCKER_USER}"
 elif [ "$(id -u)" -eq 0 ] && [ -z "${USER:-}" ]; then
@@ -116,71 +113,78 @@ elif [ -n "${USER:-}" ]; then
 else
   RUN_USER="coder"
 fi
-export RUN_USER
-echo "[entrypoint] runtime user: ${RUN_USER}"
 
-# ── Make coder a member of the docker group (if DinD active) ───────────────
+RUN_GROUP="$(id -gn "${RUN_USER}" 2>/dev/null || echo "${RUN_USER}")"
+RUN_UID="$(id -u "${RUN_USER}" 2>/dev/null || echo 1000)"
+RUN_GID="$(id -g "${RUN_USER}" 2>/dev/null || echo 1000)"
+export RUN_USER RUN_GROUP RUN_UID RUN_GID
+echo "[entrypoint] runtime user=${RUN_USER} uid=${RUN_UID} gid=${RUN_GID} group=${RUN_GROUP}"
+
+# ── Make the runtime user a member of the docker group (if DinD active) ──
 if [ "${ENABLE_DIND:-false}" = "true" ] && getent group docker >/dev/null 2>&1; then
   if ! id -nG "${RUN_USER}" 2>/dev/null | grep -qw docker; then
     usermod -aG docker "${RUN_USER}" 2>/dev/null || true
+    echo "[entrypoint] added ${RUN_USER} to docker group"
   fi
 fi
 
 # ── Ensure all needed writable directories exist ──────────────────────────
-# Bind-mounted volumes retain host ownership; root must create subdirs once.
 HOME_DIR="/home/${RUN_USER}"
 [ -d "${HOME_DIR}" ] || HOME_DIR="/home/coder"
 
-DIR_PREP_OK=true
-for dir in \
-  "${HOME_DIR}/.config" \
-  "${HOME_DIR}/.config/code-server" \
-  "${HOME_DIR}/.local" \
-  "${HOME_DIR}/.local/share" \
-  "${HOME_DIR}/.local/share/code-server" \
-  "${HOME_DIR}/.local/state" \
-  "${HOME_DIR}/.cache" \
-  "${HOME_DIR}/.cache/code-server" \
-  "${HOME_DIR}/workspaces"
-do
+DIRS_NEEDED="\
+${HOME_DIR}/.config \
+${HOME_DIR}/.config/code-server \
+${HOME_DIR}/.local \
+${HOME_DIR}/.local/share \
+${HOME_DIR}/.local/share/code-server \
+${HOME_DIR}/.local/state \
+${HOME_DIR}/.cache \
+${HOME_DIR}/.cache/code-server \
+${HOME_DIR}/workspaces \
+${HOME_DIR}/entrypoint.d \
+${HOME_DIR}/.npm-global \
+${HOME_DIR}/.bun \
+${HOME_DIR}/.local/bin \
+${HOME_DIR}/.local/go \
+${HOME_DIR}/.local/pip \
+${HOME_DIR}/.cargo \
+${HOME_DIR}/.cargo/bin \
+${HOME_DIR}/.rustup \
+${HOME_DIR}/.go \
+${HOME_DIR}/.go/bin"
+
+DIR_PREP_ERR=""
+for dir in ${DIRS_NEEDED}; do
   if [ ! -d "${dir}" ]; then
     if ! mkdir -p "${dir}" 2>/dev/null; then
-      echo "[FATAL] mkdir failed: ${dir}"
-      DIR_PREP_OK=false
+      echo "[FATAL] mkdir failed: ${dir}" >&2
+      DIR_PREP_ERR="${DIR_PREP_ERR} ${dir}"
     fi
   fi
-  if ! chown "${RUN_USER}:${RUN_USER}" "${dir}" 2>/dev/null; then
-    # chown may fail on bind-mounted root-owned parent; non-fatal if dir
-    # became writable via gosu at runtime.
-    echo "[warn] chown failed: ${dir} (parent mount may be root-only)"
-  fi
 done
 
-# Also ensure managed tool paths exist (may be bind-mounted empty)
-for tool_dir in \
-  "${HOME_DIR}/.npm-global" \
-  "${HOME_DIR}/.bun" \
-  "${HOME_DIR}/.local/bin" \
-  "${HOME_DIR}/.local/go" \
-  "${HOME_DIR}/.local/pip" \
-  "${HOME_DIR}/.cargo" \
-  "${HOME_DIR}/.cargo/bin" \
-  "${HOME_DIR}/.rustup" \
-  "${HOME_DIR}/.go" \
-  "${HOME_DIR}/.go/bin"
-do
-  if [ ! -d "${tool_dir}" ]; then
-    mkdir -p "${tool_dir}" 2>/dev/null || true
-    chown "${RUN_USER}:${RUN_USER}" "${tool_dir}" 2>/dev/null || true
-  fi
-done
-
-if [ "${DIR_PREP_OK}" = "false" ]; then
-  echo "[FATAL] Some required directories could not be created. Diagnostics:" >&2
+if [ -n "${DIR_PREP_ERR}" ]; then
+  echo "[FATAL] Directory creation errors. Diagnostics:" >&2
+  echo "  id: $(id 2>/dev/null || echo unknown)" >&2
+  echo "  getent passwd ${RUN_USER}: $(getent passwd "${RUN_USER}" 2>/dev/null || echo 'not found')" >&2
+  echo "  getent group docker: $(getent group docker 2>/dev/null || echo 'not found')" >&2
   for p in /home/coder "${HOME_DIR}" "${HOME_DIR}/.config" "${HOME_DIR}/.local" "${HOME_DIR}/.cache"; do
-    ls -ldn "${p}" 2>/dev/null || echo "  ${p}: (does not exist)"
+    ls -ldn "${p}" 2>/dev/null || echo "  ${p}: (does not exist)" >&2
   done
   df -h "${HOME_DIR}" 2>/dev/null || true
+fi
+
+# ── chown all needed directories to the runtime user ──────────────────────
+for dir in ${DIRS_NEEDED}; do
+  if [ -d "${dir}" ]; then
+    chown "${RUN_UID}:${RUN_GID}" "${dir}" 2>/dev/null || \
+      echo "[warn] chown ${RUN_UID}:${RUN_GID} ${dir} failed (bind-mounted host dir root-owned; prep with 'sudo chown 1000:1000 ...' on host)" >&2
+  fi
+done
+
+if [ -n "${DIR_PREP_ERR}" ]; then
+  echo "[FATAL] Cannot start: ${RUN_USER} cannot write to required directories. Run 'sudo chown -R 1000:1000 data/' on host." >&2
   exit 1
 fi
 

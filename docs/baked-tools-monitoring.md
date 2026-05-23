@@ -35,34 +35,41 @@ that falls into one of three categories.
 
 ### 1. `dependabot`
 
-The tool version is pinned in a file that Dependabot already monitors:
+The tool version is pinned in a Dockerfile `FROM` image reference that
+Dependabot's docker ecosystem can detect. Dependabot only monitors `FROM`
+image tags — it **cannot** detect version pins set via `ARG`, `RUN curl`,
+or `RUN bun install` inside the Dockerfile.
 
 | Tool | Dependabot Ecosystem | Pinned In |
 |------|---------------------|-----------|
-| code-server | docker (Dockerfile) | `Dockerfile.dockerfile` (ARG) |
-| node | docker (Dockerfile) | `Dockerfile.dockerfile` (URL) |
-| bun | docker (Dockerfile) | `Dockerfile.dockerfile` (FROM) |
-| omp | docker (Dockerfile) | `Dockerfile.dockerfile` (bun install) |
-| docker | docker (Dockerfile) | `Dockerfile.dockerfile` (FROM) |
-| dockerd | docker (Dockerfile) | `Dockerfile.dockerfile` (FROM) |
+| bun | docker (Dockerfile) | `Dockerfile.dockerfile` (`FROM oven/bun:1.3.14`) |
+| docker | docker (Dockerfile) | `Dockerfile.dockerfile` (`FROM docker:29.5.2-dind`) |
+| dockerd | docker (Dockerfile) | `Dockerfile.dockerfile` (`FROM docker:29.5.2-dind`) |
 
-Dependabot opens a PR when a newer version of the base image tag or a pinned
-URL version is available. That PR triggers `baked-tools-check.yml` which
-rebuilds the image and validates it. After merge to main, the build-image
-workflow publishes the new image.
+Dependabot opens a PR when a newer version of the base image tag is available.
+That PR triggers `baked-tools-check.yml` which rebuilds the image and validates
+it. After merge to main, the build-image workflow publishes the new image.
 
 ### 2. `baked-tools-monitor`
 
-For tools that are version-pinned but not covered by Dependabot's automatic
-ecosystem detection. The `baked-tools-monitor` workflow checks upstream versions
-and reports drift.
+For tools that are version-pinned using `ARG`, `RUN curl`, `RUN bun install`,
+or any other Dockerfile mechanism that is **not** a `FROM` image reference.
+Dependabot cannot detect these pins, so this workflow checks upstream versions
+directly and reports drift.
 
-Currently no baked tools use this type. If a future tool pins a version from a
-direct download URL not covered by Dependabot, it should use this type, and
-the upstream check in `.github/workflows/baked-tools-monitor.yml` should be
-updated.
+| Tool | Pinning Mechanism | Upstream Source |
+|------|-------------------|-----------------|
+| code-server | `ARG CODE_SERVER_VERSION=4.99.3` in Dockerfile | GitHub releases (coder/code-server) |
+| node | `curl nodejs.org/dist/v24.16.0/...` in Dockerfile | Node.js LTS line (nodejs.org) |
+| omp | `bun install -g @oh-my-pi/pi-coding-agent@15.2.4` in Dockerfile | npm registry |
+
+When `baked-tools-monitor` finds an update is available, it reports it in the
+workflow summary. Automatic PR creation for these tools can be added later.
+For now, any version bump must be done manually in `Dockerfile.dockerfile`,
+which triggers `baked-tools-check.yml` to validate the new image.
 
 ### 3. `intentionally-unpinned`
+
 
 These tools come from the Debian stable apt repository and are *not* version-
 pinned in the Dockerfile. Debian's security team backports CVE patches to the
@@ -134,7 +141,6 @@ Triggers: push to main (any path). Builds and pushes the `:latest` image to
 GHCR. Ensures that all merged baked-tool updates are published.
 
 ## Adding a New Baked Tool
-
 1. Install it in `Dockerfile.dockerfile`.
 2. Add its version check to `baked-tools-check.yml` (commands + version steps,
    plus coder shell step if user-facing).
@@ -144,8 +150,20 @@ GHCR. Ensures that all merged baked-tool updates are published.
    - `monitorType` — one of `dependabot`, `baked-tools-monitor`,
      `intentionally-unpinned`
    - `updateImpact`: `rebuild-image-required` (always for baked tools)
-4. If using `dependabot`, ensure Dependabot can detect the version from the
-   Dockerfile (base image tag, ARG with URL, npm install command, etc.).
-5. If using `baked-tools-monitor`, add the upstream version check to
-   `.github/workflows/baked-tools-monitor.yml`.
-6. If `intentionally-unpinned`, provide a rationale string.
+4. Select the correct `monitorType`:
+   - **`dependabot`**: only if the version is pinned via a Dockerfile `FROM`
+     image tag that Dependabot docker can detect (e.g., `FROM oven/bun:1.3.14`).
+   - **`baked-tools-monitor`**: for any version pin set via `ARG`, `RUN curl`,
+     `RUN apt-get install <specific-version>`, `RUN bun install -g pkg@version`,
+     or any other Dockerfile mechanism that is **not** a `FROM` reference.
+   - **`intentionally-unpinned`**: for tools inherited from the Debian base
+     image via apt without a version pin, with a written rationale.
+5. If using `dependabot`, verify the `sourceType` in baked-tools.json is
+   `base-image` (not `github-release`, `script`, `npm`, `apt`, or any type that
+   indicates the version comes from a non-FROM source). The validation workflow
+   enforces this.
+6. If using `baked-tools-monitor`, add the upstream version check to
+   `.github/workflows/baked-tools-monitor.yml` in the `Check upstream versions`
+   step.
+7. If `intentionally-unpinned`, provide a rationale string in
+   `intentionalRationale`.

@@ -10,9 +10,8 @@
       "installedPath": "/usr/bin/code-server",
       "sourceType": "github-release",
       "sourceUrl": "https://github.com/coder/code-server/releases/tag/v4.99.3",
-      "sourceDetail": "COPY from code-server-builder stage (ARG CODE_SERVER_VERSION=4.99.3, deb install)",
-      "monitorType": "dependabot",
-      "dependabotEcosystem": "docker",
+      "sourceDetail": "ARG CODE_SERVER_VERSION=4.99.3, curl GitHub release .deb — not a Docker FROM reference, so Dependabot docker cannot bump the ARG",
+      "monitorType": "baked-tools-monitor",
       "updateImpact": "rebuild-image-required",
       "triggerPaths": [
         "Dockerfile.dockerfile"
@@ -26,9 +25,8 @@
       "installedPath": "/usr/local/bin/node",
       "sourceType": "script",
       "sourceUrl": "https://nodejs.org/dist/v24.16.0/node-v24.16.0-linux-x64.tar.xz",
-      "sourceDetail": "Direct curl + tar extract in Dockerfile (pinned to same version as Bun's Node)",
-      "monitorType": "dependabot",
-      "dependabotEcosystem": "docker",
+      "sourceDetail": "curl + tar extract in Dockerfile (direct URL, not a Docker FROM reference — Dependabot docker cannot bump this)",
+      "monitorType": "baked-tools-monitor",
       "updateImpact": "rebuild-image-required",
       "triggerPaths": [
         "Dockerfile.dockerfile"
@@ -54,7 +52,7 @@
       "installedPath": "/usr/local/bin/bun",
       "sourceType": "base-image",
       "sourceUrl": "https://hub.docker.com/r/oven/bun/tags",
-      "sourceDetail": "COPY from oven/bun:1.3.14@sha256:e10577f0db68676a7024391c6e5cb4b879ebd17188ab750cf10024a6d700e5c4 AS omp-builder",
+      "sourceDetail": "FROM oven/bun:1.3.14@sha256:... AS omp-builder — Dependabot docker monitors FROM image tags",
       "monitorType": "dependabot",
       "dependabotEcosystem": "docker",
       "updateImpact": "rebuild-image-required",
@@ -70,9 +68,8 @@
       "installedPath": "/usr/local/bin/omp",
       "sourceType": "npm",
       "sourceUrl": "https://www.npmjs.com/package/@oh-my-pi/pi-coding-agent",
-      "sourceDetail": "bun install -g @oh-my-pi/pi-coding-agent@15.2.4 in omp-builder stage",
-      "monitorType": "dependabot",
-      "dependabotEcosystem": "docker",
+      "sourceDetail": "bun install -g @oh-my-pi/pi-coding-agent@15.2.4 in RUN command — not in package.json, so Dependabot npm will not see it",
+      "monitorType": "baked-tools-monitor",
       "updateImpact": "rebuild-image-required",
       "triggerPaths": [
         "Dockerfile.dockerfile"
@@ -86,7 +83,7 @@
       "installedPath": "/usr/local/bin/docker",
       "sourceType": "base-image",
       "sourceUrl": "https://hub.docker.com/_/docker/tags",
-      "sourceDetail": "COPY --from=docker-dind (docker:29.5.2-dind stage) all binaries",
+      "sourceDetail": "COPY --from=docker-dind (FROM docker:29.5.2-dind stage) — Dependabot docker monitors FROM image tags",
       "monitorType": "dependabot",
       "dependabotEcosystem": "docker",
       "updateImpact": "rebuild-image-required",
@@ -102,7 +99,7 @@
       "installedPath": "/usr/local/bin/dockerd",
       "sourceType": "base-image",
       "sourceUrl": "https://hub.docker.com/_/docker/tags",
-      "sourceDetail": "COPY --from=docker-dind (docker:29.5.2-dind stage) all daemon binaries and CLI plugins",
+      "sourceDetail": "COPY --from=docker-dind (FROM docker:29.5.2-dind stage) — same image as docker CLI",
       "monitorType": "dependabot",
       "dependabotEcosystem": "docker",
       "updateImpact": "rebuild-image-required",

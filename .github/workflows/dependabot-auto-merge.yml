@@ -1,0 +1,70 @@
+name: Dependabot Auto-Merge
+
+on:
+  pull_request_target:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enable-automerge:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: "${{ github.token }}"
+
+      - name: Log update details
+        env:
+          DEPENDENCY_NAMES: ${{ steps.metadata.outputs.dependency-names }}
+          DEPENDENCY_TYPE: ${{ steps.metadata.outputs.dependency-type }}
+          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
+          PACKAGE_ECOSYSTEM: ${{ steps.metadata.outputs.package-ecosystem }}
+        run: |
+          echo "Dependency: ${DEPENDENCY_NAMES}"
+          echo "Ecosystem: ${PACKAGE_ECOSYSTEM}"
+          echo "Update type: ${UPDATE_TYPE}"
+          echo "Dependency type: ${DEPENDENCY_TYPE}"
+
+      - name: Evaluate auto-merge policy
+        id: policy
+        env:
+          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
+        run: |
+          allow_automerge=false
+          reason=""
+
+          case "${UPDATE_TYPE}" in
+            version-update:semver-patch|version-update:semver-minor)
+              allow_automerge=true
+              reason="auto-merge enabled: ${UPDATE_TYPE}"
+              ;;
+            version-update:semver-major)
+              allow_automerge=false
+              reason="major update requires manual review: ${UPDATE_TYPE}"
+              ;;
+            *)
+              allow_automerge=false
+              reason="unknown update type: ${UPDATE_TYPE}"
+              ;;
+          esac
+
+          {
+            echo "allow_automerge=${allow_automerge}"
+            echo "reason=${reason}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Skip auto-merge
+        if: steps.policy.outputs.allow_automerge != 'true'
+        run: echo "Not enabling auto-merge: ${{ steps.policy.outputs.reason }}"
+
+      - name: Enable native GitHub auto-merge
+        if: steps.policy.outputs.allow_automerge == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge "${PR_URL}" --auto --squash

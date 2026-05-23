@@ -3,14 +3,12 @@ set -eu
 
 # code-server-omp-entrypoint
 # ==========================
-# Mirrors code-server upstream entrypoint behavior while adding:
-#   - oh-my-pi (omp) CLI availability
-#   - Optional Docker-in-Docker (ENABLE_DIND=true)
-#   - Optional managed tools autoinstall (CODE_SERVER_OMP_AUTOINSTALL=true)
-#   - Entrypoint.d user script hooks
-#   - Idempotent writable directory preparation for bind-mounted paths
+# Three-phase startup:
+#   1. DinD (if enabled)
+#   2. Directory preparation (idempotent, targeted chown)
+#   3. Preflight check + code-server launch (explicit env)
 
-# ── Helper: prepend a directory to PATH, avoiding dupes ────────────────────
+# ── PATH setup ─────────────────────────────────────────────────────────
 prepend_path_dir() {
   clean_path=""
   old_ifs="${IFS}"
@@ -36,21 +34,18 @@ do
 done
 export PATH
 
-# ── Debug info (always printed when ENABLE_DIND=true) ──────────────────────
-if [ "${ENABLE_DIND:-false}" = "true" ] || [ "${CODE_SERVER_OMP_DEBUG:-false}" = "true" ]; then
-  echo "[entrypoint] user=$(id -un 2>/dev/null || echo unknown) uid=$(id -u) gid=$(id -g)"
-  echo "[entrypoint] HOME=${HOME:-unset} USER=${USER:-unset} DOCKER_USER=${DOCKER_USER:-unset} ENABLE_DIND=${ENABLE_DIND:-unset}"
-  echo "[entrypoint] binaries: docker=$(command -v docker), dockerd=$(command -v dockerd), gosu=$(command -v gosu)"
-fi
+# ── Default runtime user (before DinD, before fixuid) ─────────────────
+# These are the canonical paths regardless of DOCKER_USER remapping.
+CANONICAL_HOME="/home/coder"
+CANONICAL_USER="coder"
 
-# ── Optional: Docker-in-Docker (must run as root) ──────────────────────────
+# ── Phase 1: Docker-in-Docker (must run as root) ─────────────────────
 if [ "${ENABLE_DIND:-false}" = "true" ]; then
   if [ "$(id -u)" -ne 0 ]; then
     echo "[FATAL] ENABLE_DIND=true requires the container to start as root (compose 'user: root')." >&2
     exit 1
   fi
 
-  # Ensure docker group for socket access
   if ! getent group docker >/dev/null 2>&1; then
     groupadd -r docker
   fi
@@ -63,6 +58,8 @@ if [ "${ENABLE_DIND:-false}" = "true" ]; then
 
   export DOCKER_HOST="${DOCKER_HOST:-unix:///var/run/docker.sock}"
 
+  # When dockerd starts inside DinD, the docker group may not exist yet
+  # inside the container. It's safe — dockerd creates the socket without a group.
   if ! docker info >/dev/null 2>&1; then
     echo "[dind] starting dockerd..."
     dockerd ${DOCKERD_ARGS:-} &
@@ -81,19 +78,18 @@ if [ "${ENABLE_DIND:-false}" = "true" ]; then
     echo "[dind] docker daemon already reachable"
   fi
 
-  # Make /var/run/docker.sock accessible to runtime user via docker group
+  # Make /var/run/docker.sock accessible via docker group
   if [ -S /var/run/docker.sock ]; then
-    chown root:docker /var/run/docker.sock
-    chmod 0660 /var/run/docker.sock
+    chown root:docker /var/run/docker.sock 2>/dev/null || true
+    chmod 0660 /var/run/docker.sock 2>/dev/null || true
   fi
 fi
 
-# ── Run fixuid (maps container UID to host-mounted UID) ─────────────────────
+# ── Run fixuid (maps container UID to host-mounted UID) ──────────────
 eval "$(fixuid -q)"
 
-# ── Optional: DOCKER_USER remapping ────────────────────────────────────────
+# ── DOCKER_USER remapping ────────────────────────────────────────────
 if [ "${DOCKER_USER-}" ] && [ "$(id -u)" -eq 0 ]; then
-  USER="$DOCKER_USER"
   if [ -z "$(id -u "$DOCKER_USER" 2>/dev/null)" ]; then
     usermod --login "$DOCKER_USER" coder
     groupmod -n "$DOCKER_USER" coder
@@ -103,24 +99,34 @@ if [ "${DOCKER_USER-}" ] && [ "$(id -u)" -eq 0 ]; then
   fi
 fi
 
-# ── Resolve the runtime user/group (after DOCKER_USER remap or fixuid) ────
+# ── Resolve runtime user/group/uid/gid ──────────────────────────────
 if [ -n "${DOCKER_USER-}" ]; then
   RUN_USER="${DOCKER_USER}"
 elif [ "$(id -u)" -eq 0 ] && [ -z "${USER:-}" ]; then
-  RUN_USER="coder"
+  RUN_USER="${CANONICAL_USER}"
 elif [ -n "${USER:-}" ]; then
   RUN_USER="${USER}"
 else
-  RUN_USER="coder"
+  RUN_USER="${CANONICAL_USER}"
 fi
 
-RUN_GROUP="$(id -gn "${RUN_USER}" 2>/dev/null || echo "${RUN_USER}")"
+RUN_HOME="${CANONICAL_HOME}"
 RUN_UID="$(id -u "${RUN_USER}" 2>/dev/null || echo 1000)"
 RUN_GID="$(id -g "${RUN_USER}" 2>/dev/null || echo 1000)"
-export RUN_USER RUN_GROUP RUN_UID RUN_GID
-echo "[entrypoint] runtime user=${RUN_USER} uid=${RUN_UID} gid=${RUN_GID} group=${RUN_GROUP}"
+RUN_GROUP="$(id -gn "${RUN_USER}" 2>/dev/null || echo "${RUN_USER}")"
 
-# ── Make the runtime user a member of the docker group (if DinD active) ──
+echo "[entrypoint] runtime user=${RUN_USER} uid=${RUN_UID} gid=${RUN_GID} group=${RUN_GROUP} home=${RUN_HOME}"
+
+# ── Runtime env we will pass to code-server (set now for subsequent commands) ──
+export HOME="${RUN_HOME}"
+export USER="${RUN_USER}"
+export LOGNAME="${RUN_USER}"
+export XDG_CONFIG_HOME="${RUN_HOME}/.config"
+export XDG_DATA_HOME="${RUN_HOME}/.local/share"
+export XDG_CACHE_HOME="${RUN_HOME}/.cache"
+export XDG_STATE_HOME="${RUN_HOME}/.local/state"
+
+# ── Docker group membership ─────────────────────────────────────────
 if [ "${ENABLE_DIND:-false}" = "true" ] && getent group docker >/dev/null 2>&1; then
   if ! id -nG "${RUN_USER}" 2>/dev/null | grep -qw docker; then
     usermod -aG docker "${RUN_USER}" 2>/dev/null || true
@@ -128,85 +134,210 @@ if [ "${ENABLE_DIND:-false}" = "true" ] && getent group docker >/dev/null 2>&1; 
   fi
 fi
 
-# ── Ensure all needed writable directories exist ──────────────────────────
-HOME_DIR="/home/${RUN_USER}"
-[ -d "${HOME_DIR}" ] || HOME_DIR="/home/coder"
+# ── Phase 2: Directory preparation (targeted chown, no blanket chown) ──
+# Parent dirs (may be bind-mounted from host — create if missing)
+echo "[entrypoint] preparing directories..."
 
-DIRS_NEEDED="\
-${HOME_DIR}/.config \
-${HOME_DIR}/.config/code-server \
-${HOME_DIR}/.local \
-${HOME_DIR}/.local/share \
-${HOME_DIR}/.local/share/code-server \
-${HOME_DIR}/.local/state \
-${HOME_DIR}/.cache \
-${HOME_DIR}/.cache/code-server \
-${HOME_DIR}/workspaces \
-${HOME_DIR}/entrypoint.d \
-${HOME_DIR}/.npm-global \
-${HOME_DIR}/.bun \
-${HOME_DIR}/.local/bin \
-${HOME_DIR}/.local/go \
-${HOME_DIR}/.local/pip \
-${HOME_DIR}/.cargo \
-${HOME_DIR}/.cargo/bin \
-${HOME_DIR}/.rustup \
-${HOME_DIR}/.go \
-${HOME_DIR}/.go/bin"
+for parent in \
+  "${RUN_HOME}/.config" \
+  "${RUN_HOME}/.local" \
+  "${RUN_HOME}/.local/share" \
+  "${RUN_HOME}/.local/state" \
+  "${RUN_HOME}/.cache"
+do
+  if [ ! -d "${parent}" ]; then
+    mkdir -p "${parent}" 2>/dev/null || echo "[warn] mkdir ${parent} failed (may be bind-mounted read-only)"
+  fi
+done
 
-DIR_PREP_ERR=""
-for dir in ${DIRS_NEEDED}; do
-  if [ ! -d "${dir}" ]; then
-    if ! mkdir -p "${dir}" 2>/dev/null; then
-      echo "[FATAL] mkdir failed: ${dir}" >&2
-      DIR_PREP_ERR="${DIR_PREP_ERR} ${dir}"
+# App data subdirs (code-server + managed tools)
+for appdir in \
+  "${RUN_HOME}/.config/code-server" \
+  "${RUN_HOME}/.local/share/code-server" \
+  "${RUN_HOME}/.cache/code-server" \
+  "${RUN_HOME}/.local/state/code-server-omp" \
+  "${RUN_HOME}/.local/state/code-server-omp/config" \
+  "${RUN_HOME}/.local/state/code-server-omp/tmp" \
+  "${RUN_HOME}/workspaces" \
+  "${RUN_HOME}/entrypoint.d" \
+  "${RUN_HOME}/.npm-global" \
+  "${RUN_HOME}/.bun" \
+  "${RUN_HOME}/.local/bin" \
+  "${RUN_HOME}/.local/go" \
+  "${RUN_HOME}/.local/pip" \
+  "${RUN_HOME}/.cargo" \
+  "${RUN_HOME}/.cargo/bin" \
+  "${RUN_HOME}/.rustup" \
+  "${RUN_HOME}/.go" \
+  "${RUN_HOME}/.go/bin"
+do
+  if [ ! -d "${appdir}" ]; then
+    mkdir -p "${appdir}" 2>/dev/null || echo "[warn] mkdir ${appdir} failed (bind-mounted)"
+  fi
+done
+
+# Targeted chown: only paths that belong to the app user
+for owned in \
+  "${RUN_HOME}/.config" \
+  "${RUN_HOME}/.config/code-server" \
+  "${RUN_HOME}/.local" \
+  "${RUN_HOME}/.local/share" \
+  "${RUN_HOME}/.local/share/code-server" \
+  "${RUN_HOME}/.local/state" \
+  "${RUN_HOME}/.cache" \
+  "${RUN_HOME}/.cache/code-server" \
+  "${RUN_HOME}/workspaces" \
+  "${RUN_HOME}/entrypoint.d"
+do
+  if [ -d "${owned}" ]; then
+    chown "${RUN_UID}:${RUN_GID}" "${owned}" 2>/dev/null || \
+      echo "[warn] chown ${RUN_UID}:${RUN_GID} ${owned} failed (host may need 'sudo chown 1000:1000')"
+  fi
+done
+
+# Managed tool paths — chown so the runtime user can write
+for tool in \
+  "${RUN_HOME}/.npm-global" \
+  "${RUN_HOME}/.bun" \
+  "${RUN_HOME}/.local/bin" \
+  "${RUN_HOME}/.local/go" \
+  "${RUN_HOME}/.local/pip" \
+  "${RUN_HOME}/.cargo" \
+  "${RUN_HOME}/.cargo/bin" \
+  "${RUN_HOME}/.rustup" \
+  "${RUN_HOME}/.go" \
+  "${RUN_HOME}/.go/bin"
+do
+  if [ -d "${tool}" ]; then
+    chown "${RUN_UID}:${RUN_GID}" "${tool}" 2>/dev/null || true
+  fi
+done
+
+# DO NOT chown:
+#   /var/lib/docker  (managed by dockerd)
+#   /var/lib/containerd  (managed by dockerd)
+#   /tmp  (world-writable)
+
+# ── Phase 3: Preflight check (run as the target user) ────────────────
+echo "[entrypoint] preflight checks..."
+
+PREFLIGHT_FAILED=false
+
+gosu "${RUN_USER}" sh -c '
+  CHECK_FAILED=false
+
+  check_dir() {
+    desc="$1"
+    path="$2"
+    if [ ! -e "${path}" ]; then
+      echo "[FAIL] ${desc}: ${path} does not exist" >&2
+      CHECK_FAILED=true
+      return
     fi
+    if [ ! -d "${path}" ]; then
+      echo "[FAIL] ${desc}: ${path} is not a directory" >&2
+      CHECK_FAILED=true
+      return
+    fi
+    if [ ! -w "${path}" ]; then
+      echo "[FAIL] ${desc}: ${path} is not writable" >&2
+      CHECK_FAILED=true
+      return
+    fi
+    # Write test
+    touch "${path}/.entrypoint-write-test" 2>/dev/null || {
+      echo "[FAIL] ${desc}: touch ${path}/.entrypoint-write-test failed" >&2
+      CHECK_FAILED=true
+      return
+    }
+    rm -f "${path}/.entrypoint-write-test" 2>/dev/null
+    echo "[check] ${desc}: OK"
+  }
+
+  check_dir "HOME"      "/home/coder"
+  check_dir "XDG_CONFIG" "/home/coder/.config"
+  check_dir "code-server-config" "/home/coder/.config/code-server"
+  check_dir "code-server-data"  "/home/coder/.local/share/code-server"
+  check_dir "code-server-cache" "/home/coder/.cache/code-server"
+
+  if [ "${CHECK_FAILED}" = "true" ]; then
+    echo "[DIAGNOSTICS] Preflight failed. Environment:" >&2
+    id >&2
+    env | sort >&2
+    echo "--- passwd ---" >&2
+    getent passwd "$(whoami)" 2>/dev/null >&2 || echo "(not found)" >&2
+    echo "--- groups ---" >&2
+    groups >&2
+    echo "--- getent group docker ---" >&2
+    getent group docker 2>/dev/null >&2 || echo "(not found)" >&2
+    echo "--- namei .config/code-server ---" >&2
+    namei -l /home/coder/.config/code-server 2>/dev/null >&2 || echo "(namei unavailable)" >&2
+    echo "--- namei .local/share/code-server ---" >&2
+    namei -l /home/coder/.local/share/code-server 2>/dev/null >&2 || echo "(namei unavailable)" >&2
+    echo "--- namei .cache/code-server ---" >&2
+    namei -l /home/coder/.cache/code-server 2>/dev/null >&2 || echo "(namei unavailable)" >&2
+    echo "--- ls -ldn ---" >&2
+    for p in /home/coder /home/coder/.config /home/coder/.config/code-server /home/coder/.local /home/coder/.local/share /home/coder/.local/share/code-server /home/coder/.cache /home/coder/.cache/code-server; do
+      ls -ldn "${p}" 2>/dev/null || echo "  ${p}: (does not exist)" >&2
+    done
+    echo "--- mount | grep /home/coder ---" >&2
+    mount 2>/dev/null | grep "/home/coder" || echo "(none)" >&2
+    echo "--- /proc/self/mountinfo | grep /home/coder ---" >&2
+    cat /proc/self/mountinfo 2>/dev/null | grep "/home/coder" || echo "(none)" >&2
+    exit 1
   fi
-done
+' 2>&1
 
-if [ -n "${DIR_PREP_ERR}" ]; then
-  echo "[FATAL] Directory creation errors. Diagnostics:" >&2
-  echo "  id: $(id 2>/dev/null || echo unknown)" >&2
-  echo "  getent passwd ${RUN_USER}: $(getent passwd "${RUN_USER}" 2>/dev/null || echo 'not found')" >&2
-  echo "  getent group docker: $(getent group docker 2>/dev/null || echo 'not found')" >&2
-  for p in /home/coder "${HOME_DIR}" "${HOME_DIR}/.config" "${HOME_DIR}/.local" "${HOME_DIR}/.cache"; do
-    ls -ldn "${p}" 2>/dev/null || echo "  ${p}: (does not exist)" >&2
-  done
-  df -h "${HOME_DIR}" 2>/dev/null || true
-fi
+# Capture the exit code of the gosu preflight
+PREFLIGHT_RC=$?
 
-# ── chown all needed directories to the runtime user ──────────────────────
-for dir in ${DIRS_NEEDED}; do
-  if [ -d "${dir}" ]; then
-    chown "${RUN_UID}:${RUN_GID}" "${dir}" 2>/dev/null || \
-      echo "[warn] chown ${RUN_UID}:${RUN_GID} ${dir} failed (bind-mounted host dir root-owned; prep with 'sudo chown 1000:1000 ...' on host)" >&2
-  fi
-done
-
-if [ -n "${DIR_PREP_ERR}" ]; then
-  echo "[FATAL] Cannot start: ${RUN_USER} cannot write to required directories. Run 'sudo chown -R 1000:1000 data/' on host." >&2
+if [ "${PREFLIGHT_RC}" -ne 0 ]; then
+  echo "[FATAL] Preflight checks failed. Cannot start code-server." >&2
   exit 1
 fi
 
-# ── Optional: managed tools autoinstall ────────────────────────────────────
+echo "[entrypoint] preflight: all checks passed"
+
+# ── Managed tools autoinstall (optional) ────────────────────────────
 if [ "${CODE_SERVER_OMP_AUTOINSTALL:-false}" = "true" ]; then
   echo "[managed-tools] installing missing or outdated managed tools..."
-  if [ "$(id -u)" -eq 0 ]; then
-    gosu "${RUN_USER}" env PATH="${PATH}" npm run --prefix /opt/code-server-omp/managed-tools managed-tools:init
-  else
+  gosu "${RUN_USER}" env \
+    HOME="${RUN_HOME}" \
+    USER="${RUN_USER}" \
+    PATH="${PATH}" \
     npm run --prefix /opt/code-server-omp/managed-tools managed-tools:init
-  fi
 fi
 
-# ── Entrypoint.d user hooks ────────────────────────────────────────────────
-if [ -d "${ENTRYPOINTD:-}" ]; then
-  find "${ENTRYPOINTD}" -maxdepth 1 -type f -executable -print -exec {} \;
+# ── Entrypoint.d user hooks ─────────────────────────────────────────
+if [ -d "${ENTRYPOINTD:-/home/coder/entrypoint.d}" ]; then
+  find "${ENTRYPOINTD:-/home/coder/entrypoint.d}" -maxdepth 1 -type f -executable -print -exec {} \;
 fi
 
-# ── Launch code-server ─────────────────────────────────────────────────────
+# ── Launch code-server (with explicit env) ─────────────────────────
 echo "[entrypoint] launching code-server as ${RUN_USER}..."
+
 if [ "$(id -u)" -eq 0 ]; then
-  exec gosu "${RUN_USER}" dumb-init /usr/bin/code-server --bind-addr 0.0.0.0:8080 "$@"
+  exec gosu "${RUN_USER}" env \
+    HOME="${RUN_HOME}" \
+    USER="${RUN_USER}" \
+    LOGNAME="${RUN_USER}" \
+    XDG_CONFIG_HOME="${RUN_HOME}/.config" \
+    XDG_DATA_HOME="${RUN_HOME}/.local/share" \
+    XDG_CACHE_HOME="${RUN_HOME}/.cache" \
+    XDG_STATE_HOME="${RUN_HOME}/.local/state" \
+    DOCKER_HOST="${DOCKER_HOST:-}" \
+    PATH="${PATH}" \
+    dumb-init /usr/bin/code-server --bind-addr 0.0.0.0:8080 "${RUN_HOME}/workspaces" "$@"
 fi
 
-exec dumb-init /usr/bin/code-server --bind-addr 0.0.0.0:8080 "$@"
+exec env \
+  HOME="${RUN_HOME}" \
+  USER="${RUN_USER}" \
+  LOGNAME="${RUN_USER}" \
+  XDG_CONFIG_HOME="${RUN_HOME}/.config" \
+  XDG_DATA_HOME="${RUN_HOME}/.local/share" \
+  XDG_CACHE_HOME="${RUN_HOME}/.cache" \
+  XDG_STATE_HOME="${RUN_HOME}/.local/state" \
+  DOCKER_HOST="${DOCKER_HOST:-}" \
+  PATH="${PATH}" \
+  dumb-init /usr/bin/code-server --bind-addr 0.0.0.0:8080 "${RUN_HOME}/workspaces" "$@"

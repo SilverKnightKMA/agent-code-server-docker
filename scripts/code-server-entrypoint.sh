@@ -135,9 +135,20 @@ if [ "${ENABLE_DIND:-false}" = "true" ] && getent group docker >/dev/null 2>&1; 
 fi
 
 # ── Phase 2: Directory preparation (targeted chown, no blanket chown) ──
-# Parent dirs (may be bind-mounted from host — create if missing)
+# Step 2a: Ensure RUN_HOME itself is owned by the runtime user and traversable.
+# When bind-mounts create subpaths like /home/coder/.config/code-server,
+# Docker may create the parent /home/coder with root:root 0700, which
+# blocks the runtime user from traversing to the mount points.
 echo "[entrypoint] preparing directories..."
 
+if [ ! -d "${RUN_HOME}" ]; then
+  mkdir -p "${RUN_HOME}" 2>/dev/null || echo "[warn] mkdir ${RUN_HOME} failed"
+fi
+chown "${RUN_UID}:${RUN_GID}" "${RUN_HOME}" 2>/dev/null || \
+  echo "[warn] chown ${RUN_UID}:${RUN_GID} ${RUN_HOME} failed"
+chmod 755 "${RUN_HOME}" 2>/dev/null || true
+
+# Parent dirs (may be bind-mounted from host)
 for parent in \
   "${RUN_HOME}/.config" \
   "${RUN_HOME}/.local" \
@@ -148,6 +159,7 @@ do
   if [ ! -d "${parent}" ]; then
     mkdir -p "${parent}" 2>/dev/null || echo "[warn] mkdir ${parent} failed (may be bind-mounted read-only)"
   fi
+  chown "${RUN_UID}:${RUN_GID}" "${parent}" 2>/dev/null || true
 done
 
 # App data subdirs (code-server + managed tools)
@@ -174,49 +186,9 @@ do
   if [ ! -d "${appdir}" ]; then
     mkdir -p "${appdir}" 2>/dev/null || echo "[warn] mkdir ${appdir} failed (bind-mounted)"
   fi
+  chown "${RUN_UID}:${RUN_GID}" "${appdir}" 2>/dev/null || true
 done
 
-# Targeted chown: only paths that belong to the app user
-for owned in \
-  "${RUN_HOME}/.config" \
-  "${RUN_HOME}/.config/code-server" \
-  "${RUN_HOME}/.local" \
-  "${RUN_HOME}/.local/share" \
-  "${RUN_HOME}/.local/share/code-server" \
-  "${RUN_HOME}/.local/state" \
-  "${RUN_HOME}/.cache" \
-  "${RUN_HOME}/.cache/code-server" \
-  "${RUN_HOME}/workspaces" \
-  "${RUN_HOME}/entrypoint.d"
-do
-  if [ -d "${owned}" ]; then
-    chown "${RUN_UID}:${RUN_GID}" "${owned}" 2>/dev/null || \
-      echo "[warn] chown ${RUN_UID}:${RUN_GID} ${owned} failed (host may need 'sudo chown 1000:1000')"
-  fi
-done
-
-# Managed tool paths — chown so the runtime user can write
-for tool in \
-  "${RUN_HOME}/.npm-global" \
-  "${RUN_HOME}/.bun" \
-  "${RUN_HOME}/.local/bin" \
-  "${RUN_HOME}/.local/go" \
-  "${RUN_HOME}/.local/pip" \
-  "${RUN_HOME}/.cargo" \
-  "${RUN_HOME}/.cargo/bin" \
-  "${RUN_HOME}/.rustup" \
-  "${RUN_HOME}/.go" \
-  "${RUN_HOME}/.go/bin"
-do
-  if [ -d "${tool}" ]; then
-    chown "${RUN_UID}:${RUN_GID}" "${tool}" 2>/dev/null || true
-  fi
-done
-
-# DO NOT chown:
-#   /var/lib/docker  (managed by dockerd)
-#   /var/lib/containerd  (managed by dockerd)
-#   /tmp  (world-writable)
 
 # ── Phase 3: Preflight check (run as the target user) ────────────────
 echo "[entrypoint] preflight checks..."

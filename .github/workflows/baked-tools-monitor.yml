@@ -2,7 +2,6 @@ name: Baked Tools Monitor
 
 on:
   schedule:
-    # Weekly check for upstream version drift on monitored baked tools
     - cron: '0 10 * * 1'
   workflow_dispatch:
   pull_request:
@@ -45,7 +44,6 @@ jobs:
           tool_count=$(echo "${tools}" | wc -l)
           echo "Found ${tool_count} baked tools in inventory"
 
-          # Verify each tool has required fields
           while IFS= read -r name; do
             monitor=$(jq -r --arg n "${name}" '.tools[] | select(.name == $n) | .monitorType' managed-tools/baked-tools.json)
             impact=$(jq -r --arg n "${name}" '.tools[] | select(.name == $n) | .updateImpact' managed-tools/baked-tools.json)
@@ -56,7 +54,6 @@ jobs:
               continue
             fi
 
-            # Validate monitor type
             case "${monitor}" in
               dependabot)
                 dep_eco=$(jq -r --arg n "${name}" '.tools[] | select(.name == $n) | .dependabotEcosystem // "missing"' managed-tools/baked-tools.json)
@@ -64,7 +61,6 @@ jobs:
                   echo "FAIL: tool '${name}' has monitor=dependabot but no dependabotEcosystem field"
                   failures=$((failures + 1))
                 else
-                  # Check that the ecosystem exists in .github/dependabot.yml
                   if grep -q "^  - package-ecosystem: \"${dep_eco}\"" .github/dependabot.yml 2>/dev/null; then
                     echo "OK: ${name} -> dependabot ecosystem=${dep_eco} (present in dependabot.yml)"
                   else
@@ -86,13 +82,11 @@ jobs:
                 ;;
             esac
 
-            # Validate update impact
             if [ "${impact}" != "rebuild-image-required" ]; then
               echo "FAIL: tool '${name}' has invalid updateImpact='${impact}' (expected rebuild-image-required)"
               failures=$((failures + 1))
             fi
 
-            # Check for unresolved placeholders
             url=$(jq -r --arg n "${name}" '.tools[] | select(.name == $n) | .sourceUrl // ""' managed-tools/baked-tools.json)
             if echo "${url}" | grep -qE '\{[a-zA-Z_][a-zA-Z0-9_]*\}'; then
               echo "FAIL: tool '${name}' has unresolved template variables in sourceUrl: ${url}"
@@ -108,10 +102,6 @@ jobs:
 
       - name: Check upstream versions
         id: upstream_checks
-        # Intentionally-unpinned tools are excluded — they come from
-        # Debian stable and are not version-pinned. Dependabot-covered
-        # tools (docker ecosystem) are handled by Dependabot PRs.
-        # This step checks tools where upstream version info is available.
         run: |
           echo "=== Upstream version checks ==="
           results_file=$(mktemp)
@@ -131,7 +121,6 @@ jobs:
               failures=$((failures + 1))
               return 1
             }
-            # Strip prefix if version_cmd is given
             if [ -n "${version_cmd}" ]; then
               parsed=$(echo "${upstream}" | eval "${version_cmd}" 2>/dev/null) || parsed="${upstream}"
             else
@@ -156,10 +145,11 @@ jobs:
             'curl -fsSL "https://registry.npmjs.org/@oh-my-pi/pi-coding-agent/latest" 2>/dev/null | jq -r ".version" 2>/dev/null' \
             'cat'
 
-          # docker/dockerd — via docker base image tag (same version)
+          # docker/dockerd — via docker base image tag
+          # Pipefail guard: if curl fails, empty string prevents script exit
           upstream_check "docker" "29.5.2" \
-            'curl -fsSL "https://registry.hub.docker.com/v2/repositories/library/docker/tags?page_size=5&ordering=last_updated" 2>/dev/null | jq -r "[.results[] | select(.name | endswith(\"-dind\")) | select(.name | endswith(\"-dind-rootless\") | not)][0] | .name // .results[0].name | sub(\"-dind$\"; \"\")" 2>/dev/null' \
-            'cat'
+            'curl -fsSL "https://registry.hub.docker.com/v2/repositories/library/docker/tags?page_size=5&ordering=last_updated" 2>/dev/null | jq -r "[.results[] | select(.name | endswith(\"-dind\")) | select(.name | endswith(\"-dind-rootless\") | not)][0] | .name // \"\" | sub(\"-dind$\"; \"\")" 2>/dev/null || true' \
+            'cat' || true
 
           echo "---"
           echo "results_file=${results_file}" >> "${GITHUB_OUTPUT}"
@@ -184,7 +174,6 @@ jobs:
           failures=0
           updates=0
 
-          # Load upstream results into associative array
           declare -A upstream_map
           if [ -f "${RESULTS_FILE:-}" ]; then
             while IFS='|' read -r name current upstream _extra; do

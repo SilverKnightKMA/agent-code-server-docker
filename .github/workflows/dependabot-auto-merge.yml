@@ -70,8 +70,8 @@ jobs:
           changed=$(gh pr view "${PR_NUMBER}" --json files --jq '.files[].path' 2>/dev/null || echo "")
 
           if [ -z "${changed}" ]; then
-            echo "Warning: could not list changed files; assuming safe"
-            echo "files_safe=true" >> "${GITHUB_OUTPUT}"
+            echo "Could not list changed files; manual review required"
+            echo "files_safe=false" >> "${GITHUB_OUTPUT}"
             exit 0
           fi
 

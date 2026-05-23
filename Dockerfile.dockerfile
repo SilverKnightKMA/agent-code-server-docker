@@ -67,6 +67,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git-lfs \
     htop \
     iproute2 \
+    iptables \
     jq \
     less \
     locales \

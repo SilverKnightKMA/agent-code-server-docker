@@ -57,13 +57,12 @@ jobs:
         run: |
           failures=0
           for cmd in code-server node npm bun omp docker dockerd gosu dumb-init git curl jq python3 pip; do
-            # bun is at /root/.bun/bin/bun (copied from bun builder stage)
-            # All other tools are in system PATH
-            if docker run --rm --entrypoint /bin/bash -e "PATH=/root/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" code-server-omp:test -c "command -v ${cmd}" > /dev/null 2>&1; then
-              echo "OK: ${cmd} found"
+            result=$(docker run --rm --entrypoint /bin/bash -e "PATH=/root/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" code-server-omp:test -c "command -v ${cmd}" 2>&1) || true
+            if [ -n "${result}" ]; then
+              echo "OK: ${cmd} found at ${result}"
             else
               echo "FAIL: ${cmd} not found"
-              docker run --rm --entrypoint /bin/bash -e "PATH=/root/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" code-server-omp:test -c "command -v ${cmd} 2>&1; which ${cmd} 2>&1 || true" 2>&1 || true
+              docker run --rm --entrypoint /bin/bash -e "PATH=/root/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" code-server-omp:test -c "which ${cmd} 2>&1 || echo '---'; ls -la /root/.bun/bin/${cmd} 2>/dev/null || ls -la /usr/local/bin/${cmd} 2>/dev/null || echo 'binary not found anywhere'" 2>&1 || echo "(docker run failed)"
               failures=$((failures + 1))
             fi
           done

@@ -1,0 +1,126 @@
+name: Auto Merge Automation PRs
+
+permissions:
+  contents: write
+  pull-requests: write
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - labeled
+      - unlabeled
+      - ready_for_review
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Pull request number to evaluate"
+        required: true
+        type: string
+
+concurrency:
+  group: auto-merge-pr-${{ github.event.pull_request.number || inputs.pr_number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  enable-automerge:
+    name: Enable auto-merge for trusted automation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve pull request
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          if [ "${EVENT_NAME}" = "pull_request_target" ]; then
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+          else
+            PR_NUMBER="${INPUT_PR_NUMBER}"
+          fi
+
+          gh pr view "${PR_NUMBER}" \
+            --repo "${GH_REPO}" \
+            --json number,author,headRefName,labels,isDraft,mergeStateStatus \
+            --jq '
+              . as $pr |
+              "number=\($pr.number)",
+              "author=\($pr.author.login)",
+              "headRefName=\($pr.headRefName)",
+              "isDraft=\($pr.isDraft)",
+              "mergeStateStatus=\($pr.mergeStateStatus)",
+              "labels=\($pr.labels | map(.name) | join(","))"
+            ' >> "$GITHUB_OUTPUT"
+
+      - name: Check automation trust policy
+        id: policy
+        env:
+          PR_AUTHOR: ${{ steps.pr.outputs.author }}
+          PR_HEAD_REF: ${{ steps.pr.outputs.headRefName }}
+          PR_LABELS: ${{ steps.pr.outputs.labels }}
+          PR_IS_DRAFT: ${{ steps.pr.outputs.isDraft }}
+        run: |
+          trusted=false
+          reason="PR is not from a trusted automation source"
+
+          if [ "${PR_AUTHOR}" = "dependabot[bot]" ] || [ "${PR_AUTHOR}" = "app/dependabot" ]; then
+            trusted=true
+            reason="Dependabot PR"
+          elif [ "${PR_AUTHOR}" = "github-actions[bot]" ] || [ "${PR_AUTHOR}" = "app/github-actions" ]; then
+            trusted=true
+            reason="GitHub Actions workflow PR"
+          fi
+
+          has_automated_label=false
+          has_wip_label=false
+          IFS=',' read -ra labels <<< "${PR_LABELS}"
+          for label in "${labels[@]}"; do
+            if [ "${label}" = "automated" ]; then
+              has_automated_label=true
+            fi
+            if [ "${label}" = "wip" ]; then
+              has_wip_label=true
+            fi
+          done
+
+          allowed=false
+          if [ "${trusted}" = "true" ] && [ "${has_automated_label}" = "true" ] && [ "${has_wip_label}" = "false" ] && [ "${PR_IS_DRAFT}" = "false" ]; then
+            allowed=true
+          fi
+
+          {
+            echo "trusted=${trusted}"
+            echo "allowed=${allowed}"
+            echo "reason=${reason}"
+            echo "has_automated_label=${has_automated_label}"
+            echo "has_wip_label=${has_wip_label}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Explain skipped PR
+        if: steps.policy.outputs.allowed != 'true'
+        run: |
+          echo "Auto-merge not enabled."
+          echo "Reason: ${{ steps.policy.outputs.reason }}"
+          echo "Trusted source: ${{ steps.policy.outputs.trusted }}"
+          echo "Has automated label: ${{ steps.policy.outputs.has_automated_label }}"
+          echo "Has wip label: ${{ steps.policy.outputs.has_wip_label }}"
+
+      - name: Update branch when behind
+        if: steps.policy.outputs.allowed == 'true' && steps.pr.outputs.mergeStateStatus == 'BEHIND'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        run: gh pr update-branch "${PR_NUMBER}" --repo "${GH_REPO}"
+
+      - name: Enable auto-merge
+        if: steps.policy.outputs.allowed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        run: gh pr merge "${PR_NUMBER}" --repo "${GH_REPO}" --auto --merge

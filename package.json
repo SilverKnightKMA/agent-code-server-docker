@@ -5,6 +5,8 @@
   "description": "Managed toolchain scripts for code-server-omp Docker image.",
   "license": "MIT",
   "scripts": {
+    "validate:managed-tools": "node scripts/validate-managed-tools.mjs",
+    "update:managed-tools": "node scripts/update-managed-tools.mjs",
     "managed-tools:init": "npm run managed-tools:npm:init && npm run managed-tools:go:init && npm run managed-tools:mounted:init",
     "managed-tools:status": "node scripts/managed-tools-status.mjs status",
     "managed-tools:report": "node scripts/managed-tools-status.mjs report",
@@ -17,8 +19,7 @@
     "managed-tools:go:compare": "node scripts/managed-go-tools.mjs compare",
     "managed-tools:mounted:init": "node scripts/managed-mounted-tools.mjs init",
     "managed-tools:mounted:status": "node scripts/managed-mounted-tools.mjs status",
-    "managed-tools:mounted:compare": "node scripts/managed-mounted-tools.mjs compare",
-    "managed-tools:rust:status": "node scripts/managed-mounted-tools.mjs status"
+    "managed-tools:mounted:compare": "node scripts/managed-mounted-tools.mjs compare"
   },
   "dependencies": {
     "@oh-my-pi/pi-coding-agent": "15.2.4",

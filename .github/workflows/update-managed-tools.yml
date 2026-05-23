@@ -1,0 +1,53 @@
+name: Update Managed Tools
+
+permissions:
+  contents: write
+  pull-requests: write
+
+on:
+  schedule:
+    - cron: "30 3 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: update-managed-tools
+  cancel-in-progress: false
+
+jobs:
+  update-managed-tools:
+    name: Update managed mounted tool pins
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout builder repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Update managed tool manifest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run update:managed-tools
+
+      - name: Validate managed tool manifest
+        run: npm run validate:managed-tools
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v9
+        with:
+          commit-message: "chore: update managed mounted tools"
+          title: "chore: update managed mounted tools"
+          body: |
+            Updates pinned managed mounted tool versions in `managed-tools/manifest.json`.
+          branch: automated/update-managed-tools
+          delete-branch: true
+          add-paths: |
+            managed-tools/manifest.json
+          labels: |
+            automated
+            dependencies

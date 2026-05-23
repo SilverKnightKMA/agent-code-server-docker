@@ -7,7 +7,7 @@ Docker-in-Docker (`ENABLE_DIND=true`) requires a privileged container. Only enab
 ## Image contents
 
 - code-server runs as non-root user `coder` (UID 1000).
-- oh-my-pi (omp) is a Node.js CLI — it runs within the user's shell context.
+- oh-my-pi (omp) is a Bun/Node.js CLI — it runs within the user's shell context.
 - Managed tools are downloaded from official upstream sources with SHA-256 verification.
 - No arbitrary code execution in build process; all packages are pinned by version and checksummed where possible.
 

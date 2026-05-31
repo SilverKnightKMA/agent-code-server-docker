@@ -128,8 +128,6 @@ RUN ARCH="$(dpkg --print-architecture)" \
 COPY --from=toolchain /opt/code-server-omp /opt/code-server-omp
 COPY --from=toolchain /usr/local/bin/code-server-omp-entrypoint /usr/local/bin/code-server-omp-entrypoint
 COPY --from=toolchain /opt/code-server-omp/managed-tools/.tmux.conf /etc/tmux.conf
-COPY --from=toolchain /opt/code-server-omp/managed-tools/scripts/tmux-save-state.sh /usr/local/bin/code-server-omp-tmux-save-state
-COPY --from=toolchain /opt/code-server-omp/managed-tools/scripts/tmux-restore-state.sh /usr/local/bin/code-server-omp-tmux-restore-state
 
 # ── Docker-in-Docker binaries ─────────────────────────────────────
 COPY --from=docker-dind /usr/local/bin/ /usr/local/bin/
@@ -158,7 +156,6 @@ ENV XDG_DATA_HOME=/home/coder/.local/share
 ENV XDG_STATE_HOME=/home/coder/.local/state
 ENV CODE_SERVER_OMP_CONFIG_CACHE_DIR=/home/coder/.local/state/code-server-omp/config
 ENV CODE_SERVER_OMP_TMPDIR=/home/coder/.local/state/code-server-omp/tmp
-ENV TMUX_TMPDIR=/home/coder/.local/state/tmux
 ENV ENTRYPOINTD=/home/coder/entrypoint.d
 
 ENV PATH=/home/coder/.local/bin:/home/coder/.npm-global/bin:/home/coder/.local/go/bin:/home/coder/.go/bin:/home/coder/.cargo/bin:/home/coder/.local/pip/bin:/home/coder/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -176,7 +173,6 @@ RUN mkdir -p \
     /home/coder/.local/pip/bin \
     /home/coder/.local/share \
     /home/coder/.local/state/code-server-omp \
-    /home/coder/.local/state/tmux \
     /home/coder/.local/state \
     /home/coder/.npm-global \
     /home/coder/.ssh \
@@ -184,13 +180,13 @@ RUN mkdir -p \
     /home/coder/entrypoint.d \
   && chown -R coder:coder /home/coder
 
-# ── Shell profile: PATH, tmux defaults, and shell hints ─────────────────
+# ── Shell profile: PATH and environment for managed tool directories ──────────
 # code-server spawns bash -i (interactive non-login) which reads
 # /etc/bash.bashrc then ~/.bashrc. The profile.d script only gets
 # loaded by login shells, so source it from /etc/bash.bashrc.
 RUN mkdir -p /etc/profile.d \
   && printf '%s\n' \
-    '# code-server-omp: PATH, managed-tools hints, tmux defaults, and shell environment' \
+    '# code-server-omp: PATH, managed-tools hints, and shell environment' \
     '# This script is sourced from /etc/bash.bashrc and /etc/profile' \
     '' \
     'BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"' \
@@ -200,23 +196,16 @@ RUN mkdir -p /etc/profile.d \
     'GOBIN="${GOBIN:-$HOME/.go/bin}"' \
     'CARGO_HOME="${CARGO_HOME:-$HOME/.cargo}"' \
     'PYTHONUSERBASE="${PYTHONUSERBASE:-$HOME/.local/pip}"' \
-    'XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"' \
-    'TMUX_TMPDIR="${TMUX_TMPDIR:-$XDG_STATE_HOME/tmux}"' \
     '' \
     'PATH="$HOME/.bun/bin:$HOME/.npm-global/bin:$HOME/.local/bin:$HOME/.local/go/bin:$HOME/.go/bin:$HOME/.cargo/bin:$HOME/.local/pip/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"' \
-    'export BUN_INSTALL NPM_CONFIG_PREFIX NPM_CONFIG_CACHE GOPATH GOBIN CARGO_HOME PYTHONUSERBASE XDG_STATE_HOME TMUX_TMPDIR PATH' \
-    'mkdir -p "$TMUX_TMPDIR" 2>/dev/null || true' \
+    'export BUN_INSTALL NPM_CONFIG_PREFIX NPM_CONFIG_CACHE GOPATH GOBIN CARGO_HOME PYTHONUSERBASE PATH' \
     '' \
-    'if [ -n "${BASH_VERSION:-}" ] && [ -n "${PS1:-}" ]; then' \
-    '  if [ -z "${CODE_SERVER_OMP_SHELL_HINT_SHOWN:-}" ]; then' \
-    '    export CODE_SERVER_OMP_SHELL_HINT_SHOWN=1' \
-    '    printf "\n[code-server-omp] Managed tools persist under %s\n" "$HOME"' \
-    '    printf "[code-server-omp] Install/update pinned tools: npm run --prefix /opt/code-server-omp/managed-tools managed-tools:init\n"' \
-    '    printf "[code-server-omp] Check status: npm run --prefix /opt/code-server-omp/managed-tools managed-tools:status\n"' \
-    '    printf "[code-server-omp] Managed npm tools live in %s\n" "$NPM_CONFIG_PREFIX"' \
-    '    printf "[code-server-omp] tmux sockets/state live in %s\n\n" "$TMUX_TMPDIR"' \
-    '  fi' \
-    '  printf "[code-server-omp] Tip: hold Alt while dragging to select/copy text when tmux mouse mode is on.\n"' \
+    'if [ -n "${BASH_VERSION:-}" ] && [ -n "${PS1:-}" ] && [ -z "${CODE_SERVER_OMP_SHELL_HINT_SHOWN:-}" ]; then' \
+    '  export CODE_SERVER_OMP_SHELL_HINT_SHOWN=1' \
+    '  printf "\\n[code-server-omp] Managed tools persist under %s\\n" "$HOME"' \
+    '  printf "[code-server-omp] Install/update pinned tools: npm run --prefix /opt/code-server-omp/managed-tools managed-tools:init\\n"' \
+    '  printf "[code-server-omp] Check status: npm run --prefix /opt/code-server-omp/managed-tools managed-tools:status\\n"' \
+    '  printf "[code-server-omp] Managed npm tools live in %s\\n\\n" "$NPM_CONFIG_PREFIX"' \
     'fi' \
     > /etc/profile.d/code-server-omp-path.sh \
   && printf '\n# code-server-omp\n. /etc/profile.d/code-server-omp-path.sh\n' >> /etc/bash.bashrc

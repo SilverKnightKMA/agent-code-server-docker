@@ -22,7 +22,7 @@ mkdir -p \
   data/npm-global data/bun \
   data/local-bin data/local-go data/local-pip \
   data/cargo data/rustup data/go \
-  data/code-server-omp-cache data/tmux-state \
+  data/code-server-omp-cache \
   data/entrypoint.d
 
 # 2. Set ownership (UID 1000 = coder trong container)
@@ -34,7 +34,7 @@ sudo chown -R 1000:1000 \
   data/npm-global data/bun \
   data/local-bin data/local-go data/local-pip \
   data/cargo data/rustup data/go \
-  data/code-server-omp-cache data/tmux-state \
+  data/code-server-omp-cache \
   data/entrypoint.d
 
 # KHÔNG chown /var/lib/docker hoặc /var/lib/containerd
@@ -69,7 +69,7 @@ sudo chown 1000:1000 \
   data/npm-global data/bun \
   data/local-bin data/local-go data/local-pip \
   data/cargo data/rustup data/go \
-  data/code-server-omp-cache data/tmux-state \
+  data/code-server-omp-cache \
   data/entrypoint.d
 ```
 
@@ -154,10 +154,6 @@ drwxr-xr-x 1000 1000 ... /home/coder/.cache
 | **2. Managed mounted** | omp, TypeScript LSP, Go, Rust, gh, yq, ripgrep | Volume data/ |
 | **3. Custom mounted** | npm install -g, go install, cargo install | Volume data/ |
 
-Giữ chuột trong tmux:
-- VS Code integrated terminal: giữ `Alt` khi kéo chuột để force terminal selection/copy khi tmux đang bắt mouse events.
-- Session/socket của tmux giờ nằm ở `~/.local/state/tmux`, và compose mẫu mount nó ra `./data/tmux-state`, nên recreate container vẫn giữ được tmux server state nếu volume đó còn nguyên.
-- Muốn copy bằng chuột trong tmux ở VS Code: giữ `Alt` rồi kéo để chọn; sau đó copy như bình thường của terminal/OS.
 ## Ports
 
 - `8080` (mặc định), map qua `8880` trong compose mẫu

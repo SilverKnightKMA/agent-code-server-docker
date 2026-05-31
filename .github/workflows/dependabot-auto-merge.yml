@@ -100,7 +100,7 @@ jobs:
 
           while IFS= read -r filepath; do
             case "${filepath}" in
-              Dockerfile*|scripts/*|scripts/**|bootstrap.sh|package.json|package-lock.json|bun.lock|go.mod|go.sum|tools.go|managed-tools/baked-tools.json|.github/workflows/baked-tools-check.yml|.github/workflows/baked-tools-monitor.yml)
+              Dockerfile*|scripts/*|scripts/**|bootstrap.sh|package.json|package-lock.json|bun.lock|go.mod|go.sum|tools.go|managed-tools/baked-tools.json|.github/workflows/baked-tools-check.yml|.github/workflows/baked-tools-monitor.yml|.tmux.conf)
                 touches_baked=true
                 ;;
               package.json|package-lock.json|go.mod|go.sum|tools.go|scripts/managed-npm-tools.mjs|scripts/managed-go-tools.mjs|scripts/managed-mounted-tools.mjs|scripts/managed-tools-config.mjs|scripts/managed-tools-output.mjs|scripts/managed-tools-status.mjs|scripts/validate-managed-tools.mjs|managed-tools/manifest.json|managed-tools/policy.json|.github/workflows/managed-tools-check.yml)

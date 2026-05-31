@@ -52,7 +52,7 @@
       "installedPath": "/usr/local/bin/bun",
       "sourceType": "base-image",
       "sourceUrl": "https://hub.docker.com/r/oven/bun/tags",
-      "sourceDetail": "FROM oven/bun:1.3.14@sha256:... AS omp-builder — Dependabot docker monitors FROM image tags",
+      "sourceDetail": "FROM oven/bun:1.3.14@sha256:... AS bun-runtime — Dependabot docker monitors FROM image tags",
       "monitorType": "dependabot",
       "dependabotEcosystem": "docker",
       "updateImpact": "rebuild-image-required",
@@ -61,14 +61,12 @@
       ]
     },
     {
-      "name": "omp",
-      "currentVersion": "15.2.4",
-      "versionCommand": "omp --version",
-      "versionPattern": "^omp/[0-9]+\\.[0-9]+\\.[0-9]+",
-      "installedPath": "/usr/local/bin/omp",
-      "sourceType": "npm",
-      "sourceUrl": "https://www.npmjs.com/package/@oh-my-pi/pi-coding-agent",
-      "sourceDetail": "bun install -g @oh-my-pi/pi-coding-agent@15.2.4 in RUN command — not in package.json, so Dependabot npm will not see it",
+      "name": "fixuid",
+      "currentVersion": "0.6.0",
+      "installedPath": "/usr/local/bin/fixuid",
+      "sourceType": "github-release",
+      "sourceUrl": "https://github.com/boxboat/fixuid/releases/tag/v0.6.0",
+      "sourceDetail": "curl GitHub release tarball in Dockerfile (direct URL, not a Docker FROM reference — Dependabot docker cannot bump this)",
       "monitorType": "baked-tools-monitor",
       "updateImpact": "rebuild-image-required",
       "triggerPaths": [
@@ -189,6 +187,19 @@
       "sourceDetail": "apt-get install python3-pip (debian:13-slim package, not version-pinned; symlinked to /usr/local/bin/pip)",
       "monitorType": "intentionally-unpinned",
       "intentionalRationale": "pip comes from Debian stable apt repository via python3-pip. Same rationale as python3: tied to Debian release, security patches backported by the Debian security team.",
+      "updateImpact": "rebuild-image-required"
+    }
+,
+    {
+      "name": "tmux",
+      "currentVersion": "apt-stable",
+      "versionCommand": "tmux -V",
+      "versionPattern": "^tmux [0-9]+\.[0-9a-z]+",
+      "installedPath": "/usr/bin/tmux",
+      "sourceType": "apt",
+      "sourceDetail": "apt-get install tmux (debian:13-slim package, not version-pinned)",
+      "monitorType": "intentionally-unpinned",
+      "intentionalRationale": "tmux comes from Debian stable apt repository. It is user-facing but low-churn, and Debian security/stability updates are preferred over manual pin maintenance.",
       "updateImpact": "rebuild-image-required"
     }
   ]

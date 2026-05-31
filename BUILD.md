@@ -6,8 +6,8 @@ Builder-owned Docker packaging for **code-server** (VS Code in browser) plus **o
 
 | Tier | Description | Examples | Setup |
 |------|-------------|----------|-------|
-| **Baked-in** | Bundled in image, always available | code-server, omp, Node.js, Bun, Python, Git, system tools | Image build time |
-| **Managed mounted** | Version-pinned, installed on demand into persisted volumes | TypeScript LSP, ESLint, Go, Rust, gh, yq, ripgrep | `CODE_SERVER_OMP_AUTOINSTALL=true` or run `npm run managed-tools:init` |
+| **Baked-in** | Bundled in image, always available | code-server, Node.js, Bun, Python, Git, tmux, system tools | Image build time |
+| **Managed mounted** | Version-pinned, installed on demand into persisted volumes | omp, TypeScript LSP, ESLint, Go, Rust, gh, yq, ripgrep | `CODE_SERVER_OMP_AUTOINSTALL=true` or run `npm run managed-tools:init` |
 | **Custom mounted** | User-installed via package managers | `npm install -g`, `go install`, `cargo install`, `pip install --user` | Direct commands |
 
 ## Quick start with Docker
@@ -46,7 +46,7 @@ bash bootstrap.sh --all
 bash bootstrap.sh --npm-init    # TypeScript, ESLint, Prettier, etc.
 bash bootstrap.sh --go-init     # Go toolchain + gopls
 bash bootstrap.sh --mounted-init  # gh, yq, ripgrep, hadolint
-bash bootstrap.sh --omp         # oh-my-pi CLI
+bash bootstrap.sh --omp         # oh-my-pi CLI (managed npm tool)
 
 # Check tool status
 npm run managed-tools:status
@@ -57,7 +57,7 @@ npm run managed-tools:compare
 
 | Family | Tools | Versions |
 |--------|-------|----------|
-| npm | pyright, eslint, prettier, typescript, typescript-language-server, yaml-language-server, bash-language-server | Pinned in `managed-tools/manifest.json` |
+| npm | pyright, eslint, prettier, typescript, typescript-language-server, yaml-language-server, bash-language-server, omp | Pinned in `managed-tools/manifest.json` |
 | go_toolchain | go | Latest stable |
 | go_tools | gopls, shfmt | Pinned |
 | gh | GitHub CLI | Pinned |

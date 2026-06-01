@@ -154,10 +154,6 @@ drwxr-xr-x 1000 1000 ... /home/coder/.cache
 | **2. Managed mounted** | omp, TypeScript LSP, Go, Rust, gh, yq, ripgrep | Volume data/ |
 | **3. Custom mounted** | npm install -g, go install, cargo install | Volume data/ |
 
-Giữ chuột trong tmux:
-- VS Code integrated terminal: giữ `Alt` khi kéo chuột để force terminal selection/copy khi tmux đang bắt mouse events.
-- Session/socket của tmux giờ nằm ở `~/.local/state/tmux`, và compose mẫu mount nó ra `./data/tmux-state`, nên recreate container vẫn giữ được tmux server state nếu volume đó còn nguyên.
-- Muốn copy bằng chuột trong tmux ở VS Code: giữ `Alt` rồi kéo để chọn; sau đó copy như bình thường của terminal/OS.
 ## Ports
 
 - `8080` (mặc định), map qua `8880` trong compose mẫu

@@ -43,9 +43,11 @@ services:
       - ./data/rustup:/home/coder/.rustup
       - ./data/go:/home/coder/.go
 
-      # Managed runtime state (cache + persistent tmux sockets)
+      # Managed runtime state
       - ./data/code-server-omp-cache:/home/coder/.local/state/code-server-omp
-      - ./data/tmux-state:/home/coder/.local/state/tmux
+
+      # Optional tmux persistence (uncomment when CODE_SERVER_OMP_TMUX_PERSIST=true)
+      # - ./data/tmux-state:/home/coder/.local/state/tmux
 
       # Optional startup scripts
       # - ./data/entrypoint.d:/home/coder/entrypoint.d

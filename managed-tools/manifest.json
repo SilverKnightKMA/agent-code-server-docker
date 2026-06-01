@@ -12,12 +12,12 @@
         {
           "name": "pyright",
           "pkg": "pyright",
-          "version": "1.1.409"
+          "version": "1.1.410"
         },
         {
           "name": "eslint",
           "pkg": "eslint",
-          "version": "10.4.0"
+          "version": "10.4.1"
         },
         {
           "name": "prettier",
@@ -47,7 +47,7 @@
         {
           "name": "omp",
           "pkg": "@oh-my-pi/pi-coding-agent",
-          "version": "15.5.15"
+          "version": "15.7.3"
         }
       ]
     },
@@ -102,7 +102,7 @@
       "tools": [
         {
           "name": "gh",
-          "version": "2.92.0",
+          "version": "2.93.0",
           "repo": "cli/cli",
           "os": "linux",
           "arch": "amd64",
@@ -183,13 +183,13 @@
       "tools": [
         {
           "name": "rustc",
-          "version": "1.95.0",
+          "version": "1.96.0",
           "channel": "stable",
           "profile": "default"
         },
         {
           "name": "cargo",
-          "version": "1.95.0",
+          "version": "1.96.0",
           "channel": "stable",
           "profile": "default"
         }

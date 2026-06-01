@@ -156,7 +156,7 @@ jobs:
 
           # fixuid — baked-tools-monitor, pinned via direct GitHub release download
           upstream_check "fixuid" "0.6.0" \
-            'curl -fsSL https://api.github.com/repos/boxboat/fixuid/releases/latest 2>/dev/null | jq -r ".tag_name | sub("^v"; "")" 2>/dev/null' \
+            'curl -fsSL https://api.github.com/repos/boxboat/fixuid/tags 2>/dev/null | jq -r ".[0].name | sub(\"^v\"; \"\")" 2>/dev/null' \
             'cat'
 
           # bun — dependabot (FROM image), informational check

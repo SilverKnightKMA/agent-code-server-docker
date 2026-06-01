@@ -3,7 +3,7 @@
   "comment": "Managed tool manifest for code-server-omp-docker. Pinned versions for 3-tier dev tools.",
   "families": {
     "npm": {
-      "comment": "npm-managed JS/TS language servers and essential coding tools",
+      "comment": "npm-managed JS/TS language servers and essential coding tools, including omp",
       "installMethod": "npm install --ignore-scripts",
       "installPath": "~/.npm-global",
       "statePath": "~/.npm-global/state",
@@ -43,6 +43,11 @@
           "name": "bash-language-server",
           "pkg": "bash-language-server",
           "version": "5.6.0"
+        },
+        {
+          "name": "omp",
+          "pkg": "@oh-my-pi/pi-coding-agent",
+          "version": "15.5.15"
         }
       ]
     },

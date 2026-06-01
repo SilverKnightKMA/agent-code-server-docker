@@ -18,6 +18,7 @@ CODE_SERVER_OMP_TMPDIR="${XDG_STATE_HOME}/code-server-omp/tmp"
 
 NPM_CONFIG_PREFIX="${CONFIG_BASE}/.npm-global"
 MANAGED_NPM_PREFIX="${CONFIG_BASE}/.npm-global"
+NPM_CONFIG_CACHE="${CONFIG_BASE}/.npm"
 BUN_INSTALL="${CONFIG_BASE}/.bun"
 CARGO_HOME="${CONFIG_BASE}/.cargo"
 MANAGED_CARGO_HOME="${CONFIG_BASE}/.cargo"
@@ -34,8 +35,7 @@ export PATH="${MANAGED_RELEASE_BIN_DIR}:${MANAGED_NPM_PREFIX}/bin:${MANAGED_GO_R
 export CONFIG_BASE
 export XDG_CONFIG_HOME XDG_CACHE_HOME XDG_DATA_HOME XDG_STATE_HOME
 export CODE_SERVER_OMP_CONFIG_CACHE_DIR CODE_SERVER_OMP_TMPDIR
-export NPM_CONFIG_PREFIX MANAGED_NPM_PREFIX
-export BUN_INSTALL CARGO_HOME MANAGED_CARGO_HOME
+export NPM_CONFIG_PREFIX MANAGED_NPM_PREFIX NPM_CONFIG_CACHE BUN_INSTALL CARGO_HOME MANAGED_CARGO_HOME
 export GOPATH GOBIN MANAGED_GO_ROOT
 export PYTHONUSERBASE MANAGED_RELEASE_BIN_DIR
 export RUSTUP_HOME MANAGED_RUSTUP_HOME
@@ -71,12 +71,8 @@ install_opencode() {
 }
 
 install_omp() {
-  if command -v omp >/dev/null 2>&1; then
-    echo "[bootstrap] omp already available: $(omp --version 2>&1)"
-    return 0
-  fi
-  echo "[bootstrap] Installing oh-my-pi (omp)..."
-  bun install -g @oh-my-pi/pi-coding-agent 2>&1
+  echo "[bootstrap] Installing oh-my-pi (omp) via managed npm tools..."
+  cd "${BUILDER_DIR}" && node scripts/managed-npm-tools.mjs init omp
   echo "[bootstrap] omp installed: $(omp --version 2>&1)"
 }
 
@@ -117,7 +113,7 @@ for arg in ${_BOOTSTRAP_ARGS:-}; do
       echo "  --npm-init      Install npm-managed language servers/tools"
       echo "  --go-init       Install Go toolchain + Go tools"
       echo "  --mounted-init  Install release binaries (gh, yq, rg, ...)"
-      echo "  --omp           Install oh-my-pi (omp) CLI"
+      echo "  --omp           Install oh-my-pi (omp) via managed npm tools"
       echo "  --opencode      Install opencode-ai CLI"
       echo "  --all           Install everything above"
       exit 0

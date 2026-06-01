@@ -22,6 +22,7 @@ on:
       - scripts/managed-tools-config.mjs
       - scripts/managed-tools-output.mjs
       - scripts/managed-tools-status.mjs
+      - .tmux.conf
       - managed-tools/**
       - .github/workflows/build-image.yml
   push:
@@ -41,6 +42,7 @@ on:
       - scripts/managed-tools-config.mjs
       - scripts/managed-tools-output.mjs
       - scripts/managed-tools-status.mjs
+      - .tmux.conf
       - managed-tools/**
       - .github/workflows/build-image.yml
   schedule:
@@ -81,6 +83,7 @@ jobs:
             scripts/managed-tools-config.mjs
             scripts/managed-tools-output.mjs
             scripts/managed-tools-status.mjs
+            .tmux.conf
             managed-tools/manifest.json
             managed-tools/policy.json
             .github/workflows/build-image.yml

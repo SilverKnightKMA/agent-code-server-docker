@@ -13,7 +13,7 @@ an upgrade.
 Baked tools are installed in the Docker image at build time. They are available
 to every container created from the image, regardless of bind-mounts or volumes.
 
-Examples: code-server, node, bun, omp, docker, gosu, git, curl, jq, python3.
+Examples: code-server, node, bun, fixuid, docker, gosu, git, curl, jq, python3.
 
 Baked tools **cannot be updated without rebuilding and re-publishing the image**.
 A container restart alone will still have the old version.
@@ -61,7 +61,7 @@ directly and reports drift.
 |------|-------------------|-----------------|
 | code-server | `ARG CODE_SERVER_VERSION=4.99.3` in Dockerfile | GitHub releases (coder/code-server) |
 | node | `curl nodejs.org/dist/v24.16.0/...` in Dockerfile | Node.js LTS line (nodejs.org) |
-| omp | `bun install -g @oh-my-pi/pi-coding-agent@15.2.4` in Dockerfile | npm registry |
+| fixuid | `curl ... fixuid-0.6.0-linux-$ARCH.tar.gz` in Dockerfile | GitHub releases (boxboat/fixuid) |
 
 When `baked-tools-monitor` finds an update is available, it reports it in the
 workflow summary. Automatic PR creation for these tools can be added later.
@@ -109,7 +109,7 @@ that touches any of:
 - `scripts/code-server-entrypoint.sh`
 - `managed-tools/baked-tools.json`
 - `bootstrap.sh`
-- `package.json` / `package-lock.json` (affects baked npm/omp tools)
+- `package.json` / `package-lock.json` (affects managed-tool bootstrap content baked into the image)
 - `.github/workflows/baked-tools-check.yml`
 
 ### Managed-Tools Updates (No Image Rebuild)

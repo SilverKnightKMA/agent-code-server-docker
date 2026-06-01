@@ -12,8 +12,9 @@ services:
       DOCKER_USER: "${USER:-coder}"
       CODE_SERVER_OMP_CONFIG_SOURCE: auto
       CODE_SERVER_OMP_CONFIG_CACHE_DIR: /home/coder/.local/state/code-server-omp/config
+      NPM_CONFIG_CACHE: /home/coder/.npm
       CODE_SERVER_OMP_TMPDIR: /home/coder/.local/state/code-server-omp/tmp
-      # CODE_SERVER_OMP_AUTOINSTALL: "true"
+      # CODE_SERVER_OMP_AUTOINSTALL: "true"  # install managed tools (including omp) on startup
       # UI_PASSWORD: change-me
       # SUDO_PASSWORD: change-me
 

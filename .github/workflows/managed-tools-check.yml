@@ -93,11 +93,13 @@ jobs:
             "${TEST_HOME}/.go/bin" \
             "${TEST_HOME}/.cargo/bin" \
             "${TEST_HOME}/.rustup" \
+            "${TEST_HOME}/.npm" \
             "${TEST_HOME}/.cache"
 
           {
             echo "TEST_HOME=${TEST_HOME}"
             echo "HOME=${TEST_HOME}"
+            echo "NPM_CONFIG_CACHE=${TEST_HOME}/.npm"
             echo "MANAGED_NPM_PREFIX=${TEST_HOME}/.npm-global"
             echo "NPM_CONFIG_PREFIX=${TEST_HOME}/.npm-global"
             echo "MANAGED_RELEASE_BIN_DIR=${TEST_HOME}/.local/bin"

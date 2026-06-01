@@ -125,6 +125,7 @@ export XDG_CONFIG_HOME="${RUN_HOME}/.config"
 export XDG_DATA_HOME="${RUN_HOME}/.local/share"
 export XDG_CACHE_HOME="${RUN_HOME}/.cache"
 export XDG_STATE_HOME="${RUN_HOME}/.local/state"
+export NPM_CONFIG_CACHE="${RUN_HOME}/.npm"
 # ── Sudo password (LinuxServer-style) ───────────────────────────────
 if [ -n "${SUDO_PASSWORD-}" ]; then
   echo "[entrypoint] configuring sudo for ${RUN_USER}..."
@@ -210,6 +211,7 @@ for appdir in \
   "${RUN_HOME}/workspaces" \
   "${RUN_HOME}/entrypoint.d" \
   "${RUN_HOME}/.npm-global" \
+  "${RUN_HOME}/.npm" \
   "${RUN_HOME}/.bun" \
   "${RUN_HOME}/.local/bin" \
   "${RUN_HOME}/.local/go" \
@@ -314,8 +316,10 @@ if [ "${CODE_SERVER_OMP_AUTOINSTALL:-false}" = "true" ]; then
     HOME="${RUN_HOME}" \
     USER="${RUN_USER}" \
     PATH="${PATH}" \
+    NPM_CONFIG_CACHE="${NPM_CONFIG_CACHE}" \
     npm run --prefix /opt/code-server-omp/managed-tools managed-tools:init
 fi
+
 
 # ── Entrypoint.d user hooks ─────────────────────────────────────────
 if [ -d "${ENTRYPOINTD:-/home/coder/entrypoint.d}" ]; then
@@ -336,6 +340,8 @@ if [ "$(id -u)" -eq 0 ]; then
     XDG_STATE_HOME="${RUN_HOME}/.local/state" \
     DOCKER_HOST="${DOCKER_HOST:-}" \
     PATH="${PATH}" \
+    NPM_CONFIG_CACHE="${NPM_CONFIG_CACHE}" \
+    TMUX_TMPDIR="${TMUX_TMPDIR}" \
     dumb-init /usr/bin/code-server --bind-addr 0.0.0.0:8080 "${RUN_HOME}/workspaces" "$@"
 fi
 
@@ -349,4 +355,6 @@ exec env \
   XDG_STATE_HOME="${RUN_HOME}/.local/state" \
   DOCKER_HOST="${DOCKER_HOST:-}" \
   PATH="${PATH}" \
+  NPM_CONFIG_CACHE="${NPM_CONFIG_CACHE}" \
+  TMUX_TMPDIR="${TMUX_TMPDIR}" \
   dumb-init /usr/bin/code-server --bind-addr 0.0.0.0:8080 "${RUN_HOME}/workspaces" "$@"

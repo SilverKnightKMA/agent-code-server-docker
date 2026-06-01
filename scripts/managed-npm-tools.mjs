@@ -14,6 +14,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const rootPackageJsonPath = path.join(repoRoot, "package.json");
 
 const command = process.argv[2] ?? "status";
+const selectedTools = process.argv.slice(3);
 const installPath = normalizePath(process.env.MANAGED_NPM_PREFIX ?? process.env.NPM_CONFIG_PREFIX ?? "~/.npm-global");
 
 const { manifest, policy } = await loadManagedToolsConfig(repoRoot);
@@ -27,13 +28,15 @@ const tools = npmFamily.tools ?? [];
 const comparePolicy = policy.policy?.compare ?? {};
 const packageJson = JSON.parse(await readFile(rootPackageJsonPath, "utf8"));
 
-const bundle = {
-  name: `${packageJson.name}-managed-npm-bundle`,
-  private: true,
-  license: packageJson.license,
-  packageManager: packageJson.packageManager,
-  dependencies: Object.fromEntries(tools.map((tool) => [tool.pkg, tool.version])),
-};
+function bundleFor(selected) {
+  return {
+    name: `${packageJson.name}-managed-npm-bundle`,
+    private: true,
+    license: packageJson.license,
+    packageManager: packageJson.packageManager,
+    dependencies: Object.fromEntries(selected.map((tool) => [tool.pkg, tool.version])),
+  };
+}
 
 function normalizePath(value) {
   if (value.startsWith("~/")) {
@@ -90,8 +93,17 @@ function desiredVersionForTool(tool) {
   return tool.version;
 }
 
-async function ensureBundleFiles(tmpDir) {
-  await writeFile(path.join(tmpDir, "package.json"), JSON.stringify(bundle, null, 2) + "\n");
+function selectedToolList() {
+  if (selectedTools.length === 0) return tools;
+  const selected = tools.filter((tool) => selectedTools.includes(tool.name) || selectedTools.includes(tool.pkg));
+  if (selected.length === 0) {
+    throw new Error(`unknown npm managed tool selection: ${selectedTools.join(", ")}`);
+  }
+  return selected;
+}
+
+async function ensureBundleFiles(tmpDir, selected) {
+  await writeFile(path.join(tmpDir, "package.json"), JSON.stringify(bundleFor(selected), null, 2) + "\n");
   await rm(path.join(tmpDir, "package-lock.json"), { force: true });
 }
 
@@ -105,11 +117,11 @@ async function exists(filePath) {
   }
 }
 
-async function exposeBins() {
+async function exposeBins(selected) {
   const binDir = path.join(installPath, "bin");
   await mkdir(binDir, { recursive: true });
 
-  for (const tool of tools) {
+  for (const tool of selected) {
     const installedPackageJsonPath = path.join(installPath, "node_modules", tool.pkg, "package.json");
     if (!(await exists(installedPackageJsonPath))) continue;
     const installedPackage = JSON.parse(await readFile(installedPackageJsonPath, "utf8"));
@@ -125,8 +137,9 @@ async function exposeBins() {
 }
 
 async function runInstall() {
+  const selected = selectedToolList();
   let hasInstallWork = false;
-  for (const tool of tools) {
+  for (const tool of selected) {
     const installed = await installedVersion(installPath, tool.pkg);
     const desired = desiredVersionForTool(tool);
     const state = compareState(installed, desired);
@@ -145,12 +158,12 @@ async function runInstall() {
   }
 
   await mkdir(installPath, { recursive: true });
-  await ensureBundleFiles(installPath);
+  await ensureBundleFiles(installPath, selected);
   await execFileAsync("npm", ["install", "--ignore-scripts", "--prefix", installPath], {
     env: { ...process.env, NPM_CONFIG_PREFIX: installPath },
     maxBuffer: 10 * 1024 * 1024,
   });
-  await exposeBins();
+  await exposeBins(selected);
 
   await rm(path.join(installPath, "package.json"), { force: true });
   await rm(path.join(installPath, "package-lock.json"), { force: true });
@@ -173,14 +186,14 @@ function rowForTool(tool, installed) {
 }
 
 async function runStatus() {
-  for (const tool of tools) {
+  for (const tool of selectedToolList()) {
     const installed = await installedVersion(installPath, tool.pkg);
     printStatusRow(rowForTool(tool, installed));
   }
 }
 
 async function runCompare() {
-  for (const tool of tools) {
+  for (const tool of selectedToolList()) {
     const installed = await installedVersion(installPath, tool.pkg);
     printCompareRow(rowForTool(tool, installed));
   }

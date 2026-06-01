@@ -13,11 +13,8 @@
 #
 # (where "code-server" is the upstream coder/code-server checkout)
 
-# ── Stage: oh-my-pi builder ─────────────────────────────────────────
-FROM oven/bun:1.3.14@sha256:e10577f0db68676a7024391c6e5cb4b879ebd17188ab750cf10024a6d700e5c4 AS omp-builder
-WORKDIR /app
-# Install oh-my-pi globally via bun
-RUN bun install -g @oh-my-pi/pi-coding-agent@15.2.4
+# ── Stage: Bun runtime ───────────────────────────────────────────────
+FROM oven/bun:1.3.14@sha256:e10577f0db68676a7024391c6e5cb4b879ebd17188ab750cf10024a6d700e5c4 AS bun-runtime
 
 # ── Stage: toolchain (builder repo artifacts) ───────────────────────
 # This stage only exists so --build-context toolchain=... can inject
@@ -28,6 +25,7 @@ COPY package.json package-lock.json go.mod go.sum tools.go /opt/code-server-omp/
 COPY managed-tools/ /opt/code-server-omp/managed-tools/managed-tools/
 COPY scripts/ /opt/code-server-omp/managed-tools/scripts/
 COPY scripts/code-server-entrypoint.sh /usr/local/bin/code-server-omp-entrypoint
+COPY .tmux.conf /opt/code-server-omp/managed-tools/.tmux.conf
 
 # ── Stage: code-server build ────────────────────────────────────────
 FROM debian:13-slim@sha256:b6e2a152f22a40ff69d92cb397223c906017e1391a73c952b588e51af8883bf8 AS code-server-builder
@@ -89,6 +87,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     wget \
     xz-utils \
+    tmux \
     zsh \
   && ln -sf /usr/bin/python3 /usr/local/bin/python \
   && git lfs install \
@@ -103,12 +102,8 @@ ENV LANG=en_US.UTF-8
 COPY --from=code-server-builder /tmp/code-server.deb /tmp/code-server.deb
 RUN dpkg -i /tmp/code-server.deb && rm /tmp/code-server.deb
 
-# ── oh-my-pi installation (baked) ───────────────────────────────────
-COPY --from=omp-builder /usr/local/bin/omp /usr/local/bin/omp
-COPY --from=omp-builder /root/.bun /root/.bun
-# Copy bun binary so it is available in system PATH (and entrypoint
-# profile.d adds $HOME/.bun/bin for the coder user)
-COPY --from=omp-builder /usr/local/bin/bun /usr/local/bin/bun
+# ── Bun runtime (for managed omp and user bun tooling) ───────────────
+COPY --from=bun-runtime /usr/local/bin/bun /usr/local/bin/bun
 
 # ── Node.js + npm (baked from official image) ───────────────────────
 # Pin to same version as Bun's Node for compatibility
@@ -132,6 +127,7 @@ RUN ARCH="$(dpkg --print-architecture)" \
 # ── Toolchain scripts & config ──────────────────────────────────────
 COPY --from=toolchain /opt/code-server-omp /opt/code-server-omp
 COPY --from=toolchain /usr/local/bin/code-server-omp-entrypoint /usr/local/bin/code-server-omp-entrypoint
+COPY --from=toolchain /opt/code-server-omp/managed-tools/.tmux.conf /etc/tmux.conf
 
 # ── Docker-in-Docker binaries ─────────────────────────────────────
 COPY --from=docker-dind /usr/local/bin/ /usr/local/bin/
@@ -143,6 +139,7 @@ ENV NODE_ENV=production
 ENV DOCKER_TLS_CERTDIR=
 ENV NPM_CONFIG_PREFIX=/home/coder/.npm-global
 ENV MANAGED_NPM_PREFIX=/home/coder/.npm-global
+ENV NPM_CONFIG_CACHE=/home/coder/.npm
 ENV BUN_INSTALL=/home/coder/.bun
 ENV CARGO_HOME=/home/coder/.cargo
 ENV MANAGED_CARGO_HOME=/home/coder/.cargo
@@ -181,27 +178,35 @@ RUN mkdir -p \
     /home/coder/.ssh \
     /home/coder/workspaces \
     /home/coder/entrypoint.d \
-  && chown -R coder:coder /home/coder \
-  && npm config set prefix /home/coder/.npm-global
+  && chown -R coder:coder /home/coder
 
-# ── Shell profile: PATH for code-server integrated terminals ──────────
+# ── Shell profile: PATH and environment for managed tool directories ──────────
 # code-server spawns bash -i (interactive non-login) which reads
 # /etc/bash.bashrc then ~/.bashrc. The profile.d script only gets
 # loaded by login shells, so source it from /etc/bash.bashrc.
 RUN mkdir -p /etc/profile.d \
   && printf '%s\n' \
-    '# code-server-omp: PATH and environment for managed tool directories' \
+    '# code-server-omp: PATH, managed-tools hints, and shell environment' \
     '# This script is sourced from /etc/bash.bashrc and /etc/profile' \
     '' \
     'BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"' \
     'NPM_CONFIG_PREFIX="${NPM_CONFIG_PREFIX:-$HOME/.npm-global}"' \
+    'NPM_CONFIG_CACHE="${NPM_CONFIG_CACHE:-$HOME/.npm}"' \
     'GOPATH="${GOPATH:-$HOME/.go}"' \
     'GOBIN="${GOBIN:-$HOME/.go/bin}"' \
     'CARGO_HOME="${CARGO_HOME:-$HOME/.cargo}"' \
     'PYTHONUSERBASE="${PYTHONUSERBASE:-$HOME/.local/pip}"' \
     '' \
     'PATH="$HOME/.bun/bin:$HOME/.npm-global/bin:$HOME/.local/bin:$HOME/.local/go/bin:$HOME/.go/bin:$HOME/.cargo/bin:$HOME/.local/pip/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"' \
-    'export BUN_INSTALL NPM_CONFIG_PREFIX GOPATH GOBIN CARGO_HOME PYTHONUSERBASE PATH' \
+    'export BUN_INSTALL NPM_CONFIG_PREFIX NPM_CONFIG_CACHE GOPATH GOBIN CARGO_HOME PYTHONUSERBASE PATH' \
+    '' \
+    'if [ -n "${BASH_VERSION:-}" ] && [ -n "${PS1:-}" ] && [ -z "${CODE_SERVER_OMP_SHELL_HINT_SHOWN:-}" ]; then' \
+    '  export CODE_SERVER_OMP_SHELL_HINT_SHOWN=1' \
+    '  printf "\\n[code-server-omp] Managed tools persist under %s\\n" "$HOME"' \
+    '  printf "[code-server-omp] Install/update pinned tools: npm run --prefix /opt/code-server-omp/managed-tools managed-tools:init\\n"' \
+    '  printf "[code-server-omp] Check status: npm run --prefix /opt/code-server-omp/managed-tools managed-tools:status\\n"' \
+    '  printf "[code-server-omp] Managed npm tools live in %s\\n\\n" "$NPM_CONFIG_PREFIX"' \
+    'fi' \
     > /etc/profile.d/code-server-omp-path.sh \
   && printf '\n# code-server-omp\n. /etc/profile.d/code-server-omp-path.sh\n' >> /etc/bash.bashrc
 

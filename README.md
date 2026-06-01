@@ -48,6 +48,8 @@ docker compose up -d
 # 5. Mở http://localhost:8880
 ```
 
+Mặc định, `omp` và các managed tools khác chỉ được cài vào volume khi bạn bật `CODE_SERVER_OMP_AUTOINSTALL: "true"` trong compose hoặc chạy `npm run --prefix /opt/code-server-omp/managed-tools managed-tools:init` bên trong container.
+
 ## Host-side preparation (chi tiết)
 
 ### Tạo data directories
@@ -148,8 +150,8 @@ drwxr-xr-x 1000 1000 ... /home/coder/.cache
 
 | Tier | Ví dụ | Persist |
 |------|-------|---------|
-| **1. Baked-in** | code-server, omp, Node.js, Bun, Python, Git, Docker CLI | Trong image |
-| **2. Managed mounted** | TypeScript LSP, Go, Rust, gh, yq, ripgrep | Volume data/ |
+| **1. Baked-in** | code-server, Node.js, Bun, Python, Git, tmux, Docker CLI | Trong image |
+| **2. Managed mounted** | omp, TypeScript LSP, Go, Rust, gh, yq, ripgrep | Volume data/ |
 | **3. Custom mounted** | npm install -g, go install, cargo install | Volume data/ |
 
 ## Ports

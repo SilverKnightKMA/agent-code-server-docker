@@ -194,7 +194,7 @@
       "name": "tmux",
       "currentVersion": "apt-stable",
       "versionCommand": "tmux -V",
-      "versionPattern": "^tmux [0-9]+\.[0-9a-z]+",
+      "versionPattern": "^tmux [0-9]+\\.[0-9a-z]+",
       "installedPath": "/usr/bin/tmux",
       "sourceType": "apt",
       "sourceDetail": "apt-get install tmux (debian:13-slim package, not version-pinned)",

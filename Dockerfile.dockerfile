@@ -218,6 +218,8 @@ RUN mkdir -p /etc/profile.d \
     '    printf "[code-server-omp] Check status: npm run --prefix /opt/code-server-omp/managed-tools managed-tools:status\\n"' \
     '    printf "[code-server-omp] Managed npm tools live in %s\\n" "$NPM_CONFIG_PREFIX"' \
     '    printf "[code-server-omp] tmux socket dir: %s\\n" "$TMUX_TMPDIR"' \
+    '    printf "[code-server-omp] Dump pane: tmux capture-pane -p -S - > tmux-pane.txt\\n"' \
+    '    printf "[code-server-omp] Live log:  tmux pipe-pane -o '\''cat >> tmux-live.log'\''\\n"' \
     '    if [ "${CODE_SERVER_OMP_TMUX_PERSIST:-false}" = "true" ] || [ "${CODE_SERVER_OMP_TMUX_PERSIST:-false}" = "1" ]; then' \
     '      printf "[code-server-omp] tmux persistence: enabled (socket dir + resurrect state under %s)\\n" "$XDG_STATE_HOME/tmux"' \
     '    else' \

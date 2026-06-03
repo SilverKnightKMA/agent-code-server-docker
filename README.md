@@ -22,7 +22,7 @@ mkdir -p \
   data/npm-global data/bun \
   data/local-bin data/local-go data/local-pip \
   data/cargo data/rustup data/go \
-  data/code-server-omp-cache \
+  data/code-server-omp-cache data/tmux-state \
   data/entrypoint.d
 
 # 2. Set ownership (UID 1000 = coder trong container)
@@ -34,7 +34,7 @@ sudo chown -R 1000:1000 \
   data/npm-global data/bun \
   data/local-bin data/local-go data/local-pip \
   data/cargo data/rustup data/go \
-  data/code-server-omp-cache \
+  data/code-server-omp-cache data/tmux-state \
   data/entrypoint.d
 
 # KHÔNG chown /var/lib/docker hoặc /var/lib/containerd
@@ -69,7 +69,7 @@ sudo chown 1000:1000 \
   data/npm-global data/bun \
   data/local-bin data/local-go data/local-pip \
   data/cargo data/rustup data/go \
-  data/code-server-omp-cache \
+  data/code-server-omp-cache data/tmux-state \
   data/entrypoint.d
 ```
 

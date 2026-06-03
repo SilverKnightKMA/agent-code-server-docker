@@ -90,7 +90,7 @@ jobs:
           failures=0
           for cmd in code-server node npm bun docker dockerd git python3 tmux; do
             echo "=== ${cmd} --version ==="
-            version=$(docker run --rm --entrypoint /bin/bash code-server-omp:test -c "if [ \"${cmd}\" = tmux ]; then tmux -V; else ${cmd} --version; fi 2>&1" || echo "VERSION CHECK FAILED")
+            version=$(docker run --rm --entrypoint /bin/bash code-server-omp:test -c "${cmd} --version 2>&1" || echo "VERSION CHECK FAILED")
             echo "${version}"
             if echo "${version}" | grep -q "VERSION CHECK FAILED"; then
               echo "FAIL: ${cmd} --version failed"
@@ -147,7 +147,7 @@ jobs:
               for cmd in bun node npm tmux; do
                 loc=$(command -v "${cmd}" 2>&1) || loc="NOT_FOUND"
                 echo "command -v ${cmd}: ${loc}"
-                ver=$(if [ "${cmd}" = tmux ]; then tmux -V 2>&1; else "${cmd}" --version 2>&1; fi) || ver="FAILED($?)"
+                ver=$("${cmd}" --version 2>&1) || ver="FAILED($?)"
                 echo "${cmd} --version: ${ver}"
                 echo "---"
               done

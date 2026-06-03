@@ -162,28 +162,51 @@ jobs:
           IFS=',' read -ra checks <<< "${required_checks}"
           checks_ok=true
           failure_reason=""
+          max_attempts=18
+          attempt=1
 
-          # Fetch all check runs for the head commit
-          checks_json=$(gh api "repos/${GH_REPO}/commits/${HEAD_OID}/check-runs" --jq '.check_runs' 2>/dev/null || echo "[]")
+          while true; do
+            checks_ok=true
+            failure_reason=""
+            pending_checks=false
+            checks_json=$(gh api "repos/${GH_REPO}/commits/${HEAD_OID}/check-runs" --jq '.check_runs' 2>/dev/null || echo "[]")
 
-          for check_name in "${checks[@]}"; do
-            check_name=$(echo "${check_name}" | xargs)  # trim whitespace
-            echo "Checking: ${check_name}"
+            for check_name in "${checks[@]}"; do
+              check_name=$(echo "${check_name}" | xargs)  # trim whitespace
+              echo "Checking: ${check_name} (attempt ${attempt}/${max_attempts})"
 
-            # Find the matching check run
-            conclusion=$(echo "${checks_json}" | jq -r --arg name "${check_name}" '.[] | select(.name == $name) | .conclusion // empty' | head -1)
+              status=$(echo "${checks_json}" | jq -r --arg name "${check_name}" '.[] | select(.name == $name) | .status // empty' | head -1)
+              conclusion=$(echo "${checks_json}" | jq -r --arg name "${check_name}" '.[] | select(.name == $name) | .conclusion // empty' | head -1)
 
-            if [ -z "${conclusion}" ]; then
-              echo "  MISSING: no check run found for '${check_name}'"
-              checks_ok=false
-              failure_reason="${failure_reason} Required path-specific check '${check_name}' not found;"
-            elif [ "$(echo "${conclusion}" | tr '[:upper:]' '[:lower:]')" != "success" ]; then
-              echo "  NOT SUCCESS: ${check_name} = ${conclusion}"
-              checks_ok=false
-              failure_reason="${failure_reason} Required path-specific check '${check_name}' is ${conclusion};"
-            else
-              echo "  OK: ${check_name} = SUCCESS"
+              if [ -z "${status}" ]; then
+                echo "  PENDING: no check run found yet for '${check_name}'"
+                pending_checks=true
+                failure_reason="${failure_reason} Required path-specific check '${check_name}' not found;"
+              elif [ "$(echo "${status}" | tr '[:upper:]' '[:lower:]')" != "completed" ]; then
+                echo "  PENDING: ${check_name} status=${status}"
+                pending_checks=true
+                failure_reason="${failure_reason} Required path-specific check '${check_name}' is ${status};"
+              elif [ "$(echo "${conclusion}" | tr '[:upper:]' '[:lower:]')" != "success" ]; then
+                echo "  NOT SUCCESS: ${check_name} = ${conclusion}"
+                checks_ok=false
+                failure_reason="${failure_reason} Required path-specific check '${check_name}' is ${conclusion};"
+              else
+                echo "  OK: ${check_name} = SUCCESS"
+              fi
+            done
+
+            if [ "${pending_checks}" = "false" ]; then
+              break
             fi
+
+            if [ "${attempt}" -ge "${max_attempts}" ]; then
+              checks_ok=false
+              echo "Timed out waiting for required path-specific checks."
+              break
+            fi
+
+            sleep 10
+            attempt=$((attempt + 1))
           done
 
           echo "checks_ok=${checks_ok}" >> "$GITHUB_OUTPUT"

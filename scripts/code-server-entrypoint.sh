@@ -326,7 +326,15 @@ if [ "${CODE_SERVER_OMP_AUTOINSTALL:-false}" = "true" ]; then
     npm run --prefix /opt/code-server-omp/managed-tools managed-tools:init
 fi
 
-/usr/local/bin/code-server-omp-tmux-persist-conf > /etc/tmux.persist.conf.tmp && mv /etc/tmux.persist.conf.tmp /etc/tmux.persist.conf || rm -f /etc/tmux.persist.conf
+if /usr/local/bin/code-server-omp-tmux-persist-conf > /etc/tmux.persist.conf.tmp; then
+  if [ -s /etc/tmux.persist.conf.tmp ]; then
+    mv /etc/tmux.persist.conf.tmp /etc/tmux.persist.conf
+  else
+    rm -f /etc/tmux.persist.conf.tmp /etc/tmux.persist.conf
+  fi
+else
+  rm -f /etc/tmux.persist.conf.tmp /etc/tmux.persist.conf
+fi
 
 # ── Entrypoint.d user hooks ─────────────────────────────────────────
 if [ -d "${ENTRYPOINTD:-/home/coder/entrypoint.d}" ]; then

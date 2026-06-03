@@ -154,7 +154,7 @@ jobs:
                 echo "  PENDING: no check run found yet for '${check_name}'"
                 pending_checks=true
                 failure_reason="${failure_reason} Required path-specific check '${check_name}' not found;"
-              elif [ "${status}" != "COMPLETED" ]; then
+              elif [ "$(echo "${status}" | tr '[:upper:]' '[:lower:]')" != "completed" ]; then
                 echo "  PENDING: ${check_name} status=${status}"
                 pending_checks=true
                 failure_reason="${failure_reason} Required path-specific check '${check_name}' is ${status};"

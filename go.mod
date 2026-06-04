@@ -1,4 +1,4 @@
-module github.com/SilverKnightKMA/agent-code-server-docker
+module github.com/silverknightkma/agent-code-server-docker
 
 go 1.26.0
 

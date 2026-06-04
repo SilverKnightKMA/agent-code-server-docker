@@ -48,6 +48,11 @@
           "name": "omp",
           "pkg": "@oh-my-pi/pi-coding-agent",
           "version": "15.7.3"
+        },
+        {
+          "name": "pi",
+          "pkg": "@earendil-works/pi-coding-agent",
+          "version": "0.78.0"
         }
       ]
     },

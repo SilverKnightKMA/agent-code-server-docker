@@ -14,7 +14,7 @@ Builder-owned Docker packaging for **code-server** (VS Code in browser) plus AI 
 
 ```bash
 # Clone this repo
-git clone https://github.com/agent-code-server/agent-code-server-docker.git
+git clone https://github.com/SilverKnightKMA/agent-code-server-docker.git
 cd agent-code-server-docker
 
 # Build from upstream code-server source
@@ -46,7 +46,7 @@ bash bootstrap.sh --all
 bash bootstrap.sh --npm-init    # TypeScript, ESLint, Prettier, etc.
 bash bootstrap.sh --go-init     # Go toolchain + gopls
 bash bootstrap.sh --mounted-init  # gh, yq, ripgrep, hadolint
-bash bootstrap.sh --omp         # oh-my-pi CLI (managed npm tool)
+bash bootstrap.sh --omp         # omp/pi CLI (managed npm tool)
 
 # Check tool status
 npm run managed-tools:status

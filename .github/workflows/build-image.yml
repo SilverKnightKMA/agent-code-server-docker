@@ -149,7 +149,7 @@ jobs:
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.description=Docker image with code-server + oh-my-pi (omp)
+            org.opencontainers.image.description=Docker image with code-server + AI coding agents (omp, pi, and more)
             io.agent-code-server.builder-scope-sha=${{ steps.builder_scope.outputs.builder_scope_sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

@@ -1,6 +1,6 @@
 services:
   agent-code-server:
-    image: ghcr.io/agent-code-server/agent-code-server:latest
+    image: ghcr.io/silverknightkma/agent-code-server:latest
     container_name: agent-code-server
     init: true
     mem_limit: 4g

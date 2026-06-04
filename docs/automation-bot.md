@@ -33,7 +33,7 @@ Using a dedicated GitHub App token avoids these problems:
 1. Go to **GitHub Settings > Developer settings > GitHub Apps > New GitHub
    App**.
 2. Fill in:
-   - **GitHub App name**: `code-server-omp-bot` (or your preferred name)
+   - **GitHub App name**: `agent-code-server-bot` (or your preferred name)
    - **Homepage URL**: your repository URL
    - **Webhook**: Active (uncheck) — webhooks are not needed
 3. Under **Permissions**:
@@ -132,7 +132,7 @@ User-created PRs are never auto-merged, even if they somehow have the
 If a GitHub App is not feasible, a fine-grained Personal Access Token (PAT)
 from a bot account can be used instead. To use a PAT:
 
-1. Create a bot GitHub account (e.g., `code-server-omp-bot`).
+1. Create a bot GitHub account (e.g., `agent-code-server-bot`).
 2. Generate a fine-grained PAT with `contents: write` and `pull-requests:
    write` permissions, scoped to this repository.
 3. Add the PAT as a repository secret (e.g., `BOT_TOKEN`).

@@ -1,32 +1,32 @@
-# code-server-omp Docker Builder
+# agent-code-server Docker Builder
 
-Builder-owned Docker packaging for **code-server** (VS Code in browser) plus **oh-my-pi** (omp) coding agent.
+Builder-owned Docker packaging for **code-server** (VS Code in browser) plus AI coding agents (omp, pi, and more).
 
 ## Three-tier tool architecture
 
 | Tier | Description | Examples | Setup |
 |------|-------------|----------|-------|
 | **Baked-in** | Bundled in image, always available | code-server, Node.js, Bun, Python, Git, tmux, system tools | Image build time |
-| **Managed mounted** | Version-pinned, installed on demand into persisted volumes | omp, TypeScript LSP, ESLint, Go, Rust, gh, yq, ripgrep | `CODE_SERVER_OMP_AUTOINSTALL=true` or run `npm run managed-tools:init` |
+| **Managed mounted** | Version-pinned, installed on demand into persisted volumes | omp, TypeScript LSP, ESLint, Go, Rust, gh, yq, ripgrep | `AGENT_CODE_SERVER_AUTOINSTALL=true` or run `npm run managed-tools:init` |
 | **Custom mounted** | User-installed via package managers | `npm install -g`, `go install`, `cargo install`, `pip install --user` | Direct commands |
 
 ## Quick start with Docker
 
 ```bash
 # Clone this repo
-git clone https://github.com/code-server-omp/code-server-omp-docker.git
-cd code-server-omp-docker
+git clone https://github.com/agent-code-server/agent-code-server-docker.git
+cd agent-code-server-docker
 
 # Build from upstream code-server source
 # Requires coder/code-server checkout as build context
 docker build \
   -f Dockerfile.dockerfile \
   --build-context toolchain=. \
-  -t code-server-omp:local \
+  -t agent-code-server:local \
   .
 
 # Or build from this repo alone (no code-server source needed)
-docker build -f Dockerfile.dockerfile -t code-server-omp:local .
+docker build -f Dockerfile.dockerfile -t agent-code-server:local .
 
 # Start container
 mkdir -p data/workspaces data/ssh
@@ -89,33 +89,33 @@ The managed-tools scripts (`npm run managed-tools:status`, `:init`) fetch their
 manifest and policy from an **online upstream** by default:
 
 ```
-https://raw.githubusercontent.com/SilverKnightKMA/code-server-omp-docker/main/managed-tools/{manifest,policy}.json
+https://raw.githubusercontent.com/SilverKnightKMA/agent-code-server-docker/main/managed-tools/{manifest,policy}.json
 ```
 
 ### Environment variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `CODE_SERVER_OMP_MANAGED_TOOLS_BASE_URL` | `https://raw.githubusercontent.com/SilverKnightKMA/…` | Upstream base URL for config files |
-| `CODE_SERVER_OMP_MANAGED_TOOLS_CONFIG_MODE` | `auto` | `online` — require upstream, fail on error; `baked` — skip upstream, use baked config directly; `auto` — upstream with no fallback unless overridden |
-| `CODE_SERVER_OMP_MANAGED_TOOLS_ALLOW_BAKED_FALLBACK` | `false` | When `true`, fall back to baked config if upstream fetch fails (offline/emergency mode only) |
-| `CODE_SERVER_OMP_CONFIG_BASE_URL` | (same as `MANAGED_TOOLS_BASE_URL`) | Legacy alias |
-| `CODE_SERVER_OMP_CONFIG_SOURCE` | `auto` | Legacy alias for `MANAGED_TOOLS_CONFIG_MODE` |
+| `AGENT_CODE_SERVER_MANAGED_TOOLS_BASE_URL` | `https://raw.githubusercontent.com/SilverKnightKMA/…` | Upstream base URL for config files |
+| `AGENT_CODE_SERVER_MANAGED_TOOLS_CONFIG_MODE` | `auto` | `online` — require upstream, fail on error; `baked` — skip upstream, use baked config directly; `auto` — upstream with no fallback unless overridden |
+| `AGENT_CODE_SERVER_MANAGED_TOOLS_ALLOW_BAKED_FALLBACK` | `false` | When `true`, fall back to baked config if upstream fetch fails (offline/emergency mode only) |
+| `AGENT_CODE_SERVER_CONFIG_BASE_URL` | (same as `MANAGED_TOOLS_BASE_URL`) | Legacy alias |
+| `AGENT_CODE_SERVER_CONFIG_SOURCE` | `auto` | Legacy alias for `MANAGED_TOOLS_CONFIG_MODE` |
 
 ### Behavior
 
-- **Normal (healthy) mode**: `CODE_SERVER_OMP_MANAGED_TOOLS_CONFIG_MODE=auto` (default).
+- **Normal (healthy) mode**: `AGENT_CODE_SERVER_MANAGED_TOOLS_CONFIG_MODE=auto` (default).
   Managed-tools fetch config from upstream. If upstream fails, the command **fails**
   — it does not silently fall back to baked config. This ensures the container
   always uses the published manifest/policy from the repo.
 
-- **Online-only mode**: `CODE_SERVER_OMP_MANAGED_TOOLS_CONFIG_MODE=online`.
+- **Online-only mode**: `AGENT_CODE_SERVER_MANAGED_TOOLS_CONFIG_MODE=online`.
   Same as auto but explicitly enforced. Fails hard on fetch error (no cache, no baked).
 
-- **Baked-only mode**: `CODE_SERVER_OMP_MANAGED_TOOLS_CONFIG_MODE=baked`.
+- **Baked-only mode**: `AGENT_CODE_SERVER_MANAGED_TOOLS_CONFIG_MODE=baked`.
   Skips upstream entirely. Uses config baked into the image. Useful during
   image development or when upstream is unreachable.
 
-- **Emergency fallback**: Set `CODE_SERVER_OMP_MANAGED_TOOLS_ALLOW_BAKED_FALLBACK=true`
+- **Emergency fallback**: Set `AGENT_CODE_SERVER_MANAGED_TOOLS_ALLOW_BAKED_FALLBACK=true`
   to allow falling back through cache → baked config when upstream fetch fails.
   Intended for offline/gateway environments only.

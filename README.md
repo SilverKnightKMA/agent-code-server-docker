@@ -1,6 +1,6 @@
-# code-server-omp-docker
+# agent-code-server-docker
 
-code-server (VS Code in browser) + oh-my-pi (omp coding agent) in a single Docker image, with 3-tier tooling and optional DinD.
+code-server (VS Code in browser) with your choice of AI coding agents (omp, pi, and more) in a single Docker image, with 3-tier tooling and optional DinD.
 
 ## Requirements
 
@@ -10,8 +10,8 @@ code-server (VS Code in browser) + oh-my-pi (omp coding agent) in a single Docke
 ## Quick start
 
 ```bash
-git clone https://github.com/SilverKnightKMA/code-server-omp-docker.git
-cd code-server-omp-docker
+git clone https://github.com/SilverKnightKMA/agent-code-server-docker.git
+cd agent-code-server-docker
 
 # 1. Create all data directories (including dedicated code-server mounts)
 mkdir -p \
@@ -22,7 +22,7 @@ mkdir -p \
   data/npm-global data/bun \
   data/local-bin data/local-go data/local-pip \
   data/cargo data/rustup data/go \
-  data/code-server-omp-cache data/tmux-state \
+  data/agent-code-server-cache data/tmux-state \
   data/entrypoint.d
 
 # 2. Set ownership (UID 1000 = coder inside container)
@@ -34,7 +34,7 @@ sudo chown -R 1000:1000 \
   data/npm-global data/bun \
   data/local-bin data/local-go data/local-pip \
   data/cargo data/rustup data/go \
-  data/code-server-omp-cache data/tmux-state \
+  data/agent-code-server-cache data/tmux-state \
   data/entrypoint.d
 
 # DO NOT chown /var/lib/docker or /var/lib/containerd
@@ -48,7 +48,7 @@ docker compose up -d
 # 5. Open http://localhost:8880
 ```
 
-By default, `omp` and other managed tools are only installed into the volume when you set `CODE_SERVER_OMP_AUTOINSTALL: "true"` in compose or run `npm run --prefix /opt/code-server-omp/managed-tools managed-tools:init` inside the container.
+By default, `omp` and other managed tools are only installed into the volume when you set `AGENT_CODE_SERVER_AUTOINSTALL: "true"` in compose or run `npm run --prefix /opt/agent-code-server/managed-tools managed-tools:init` inside the container.
 
 ## Host-side preparation (details)
 
@@ -67,7 +67,7 @@ sudo chown 1000:1000 \
   data/npm-global data/bun \
   data/local-bin data/local-go data/local-pip \
   data/cargo data/rustup data/go \
-  data/code-server-omp-cache data/tmux-state \
+  data/agent-code-server-cache data/tmux-state \
   data/entrypoint.d
 ```
 
@@ -90,14 +90,14 @@ chown -R 1000:1000 data/config/git
 
 ```bash
 docker compose logs -f                    # Follow logs
-docker compose exec -u coder code-server-omp bash   # Enter container
+docker compose exec -u coder agent-code-server bash   # Enter container
 ```
 
 ### Check DinD
 
 ```bash
-docker compose exec code-server-omp docker info
-docker compose exec code-server-omp docker compose version
+docker compose exec agent-code-server docker info
+docker compose exec agent-code-server docker compose version
 ```
 
 ## Docker-in-Docker
@@ -131,7 +131,7 @@ Without DinD → no privileged mode needed, workloads run safely.
 If you still encounter EACCES errors, enter the container:
 
 ```bash
-docker compose exec code-server-omp bash -c 'id; ls -ldn /home/coder /home/coder/.config /home/coder/.local /home/coder/.cache /home/coder/.config/code-server'
+docker compose exec agent-code-server bash -c 'id; ls -ldn /home/coder /home/coder/.config /home/coder/.local /home/coder/.cache /home/coder/.config/code-server'
 ```
 
 Expected output:

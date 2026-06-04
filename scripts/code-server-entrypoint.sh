@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-# code-server-omp-entrypoint
+# agent-code-server-entrypoint
 # ==========================
 # Three-phase startup:
 #   1. DinD (if enabled)
@@ -127,8 +127,8 @@ export XDG_CACHE_HOME="${RUN_HOME}/.cache"
 export XDG_STATE_HOME="${RUN_HOME}/.local/state"
 export NPM_CONFIG_CACHE="${RUN_HOME}/.npm"
 export TMUX_TMPDIR="${RUN_HOME}/.local/state/tmux/socket"
-export CODE_SERVER_OMP_TMUX_SOCKET_DIR="${TMUX_TMPDIR}"
-export CODE_SERVER_OMP_TMUX_RESURRECT_DIR="${RUN_HOME}/.local/state/tmux/resurrect"
+export AGENT_CODE_SERVER_TMUX_SOCKET_DIR="${TMUX_TMPDIR}"
+export AGENT_CODE_SERVER_TMUX_RESURRECT_DIR="${RUN_HOME}/.local/state/tmux/resurrect"
 # ── Sudo password (LinuxServer-style) ───────────────────────────────
 if [ -n "${SUDO_PASSWORD-}" ]; then
   echo "[entrypoint] configuring sudo for ${RUN_USER}..."
@@ -208,9 +208,9 @@ for appdir in \
   "${RUN_HOME}/.config/code-server" \
   "${RUN_HOME}/.local/share/code-server" \
   "${RUN_HOME}/.cache/code-server" \
-  "${RUN_HOME}/.local/state/code-server-omp" \
-  "${RUN_HOME}/.local/state/code-server-omp/config" \
-  "${RUN_HOME}/.local/state/code-server-omp/tmp" \
+  "${RUN_HOME}/.local/state/agent-code-server" \
+  "${RUN_HOME}/.local/state/agent-code-server/config" \
+  "${RUN_HOME}/.local/state/agent-code-server/tmp" \
   "${RUN_HOME}/.local/state/tmux/socket" \
   "${RUN_HOME}/.local/state/tmux/resurrect" \
   "${RUN_HOME}/workspaces" \
@@ -315,7 +315,7 @@ fi
 echo "[entrypoint] preflight: all checks passed"
 
 # ── Managed tools autoinstall (optional) ────────────────────────────
-if [ "${CODE_SERVER_OMP_AUTOINSTALL:-false}" = "true" ]; then
+if [ "${AGENT_CODE_SERVER_AUTOINSTALL:-false}" = "true" ]; then
   echo "[managed-tools] installing missing or outdated managed tools..."
   gosu "${RUN_USER}" env \
     HOME="${RUN_HOME}" \
@@ -323,10 +323,10 @@ if [ "${CODE_SERVER_OMP_AUTOINSTALL:-false}" = "true" ]; then
     PATH="${PATH}" \
     NPM_CONFIG_CACHE="${NPM_CONFIG_CACHE}" \
     TMUX_TMPDIR="${TMUX_TMPDIR}" \
-    npm run --prefix /opt/code-server-omp/managed-tools managed-tools:init
+    npm run --prefix /opt/agent-code-server/managed-tools managed-tools:init
 fi
 
-if /usr/local/bin/code-server-omp-tmux-persist-conf > /etc/tmux.persist.conf.tmp; then
+if /usr/local/bin/agent-code-server-tmux-persist-conf > /etc/tmux.persist.conf.tmp; then
   if [ -s /etc/tmux.persist.conf.tmp ]; then
     mv /etc/tmux.persist.conf.tmp /etc/tmux.persist.conf
   else

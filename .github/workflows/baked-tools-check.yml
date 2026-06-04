@@ -61,7 +61,7 @@ jobs:
         with:
           context: builder
           file: builder/Dockerfile.dockerfile
-          tags: code-server-omp:test
+          tags: agent-code-server:test
           load: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -70,12 +70,12 @@ jobs:
         run: |
           failures=0
           for cmd in code-server node npm bun docker dockerd fixuid gosu dumb-init git curl jq python3 pip tmux; do
-            result=$(docker run --rm --entrypoint /bin/bash code-server-omp:test -c "command -v ${cmd}" 2>&1) || true
+            result=$(docker run --rm --entrypoint /bin/bash agent-code-server:test -c "command -v ${cmd}" 2>&1) || true
             if [ -n "${result}" ]; then
               echo "OK: ${cmd} found at ${result}"
             else
               echo "FAIL: ${cmd} not found"
-              docker run --rm --entrypoint /bin/bash code-server-omp:test -c "which ${cmd} 2>&1 || echo 'not found'" 2>&1 || true
+              docker run --rm --entrypoint /bin/bash agent-code-server:test -c "which ${cmd} 2>&1 || echo 'not found'" 2>&1 || true
               failures=$((failures + 1))
             fi
           done
@@ -90,7 +90,7 @@ jobs:
           failures=0
           for cmd in code-server node npm bun docker dockerd git python3 tmux; do
             echo "=== ${cmd} --version ==="
-            version=$(docker run --rm --entrypoint /bin/bash code-server-omp:test -c "if [ \"${cmd}\" = tmux ]; then tmux -V; else ${cmd} --version; fi 2>&1" || echo "VERSION CHECK FAILED")
+            version=$(docker run --rm --entrypoint /bin/bash agent-code-server:test -c "if [ \"${cmd}\" = tmux ]; then tmux -V; else ${cmd} --version; fi 2>&1" || echo "VERSION CHECK FAILED")
             echo "${version}"
             if echo "${version}" | grep -q "VERSION CHECK FAILED"; then
               echo "FAIL: ${cmd} --version failed"
@@ -105,7 +105,7 @@ jobs:
 
       - name: Verify omp is not baked into image
         run: |
-          if docker run --rm --entrypoint /bin/bash code-server-omp:test -c 'command -v omp >/dev/null 2>&1'; then
+          if docker run --rm --entrypoint /bin/bash agent-code-server:test -c 'command -v omp >/dev/null 2>&1'; then
             echo "FAIL: omp is still baked into the image"
             exit 1
           fi
@@ -115,7 +115,7 @@ jobs:
         run: |
           expected_paths="/home/coder/.bun/bin /home/coder/.npm-global/bin /home/coder/.local/bin /home/coder/.local/go/bin /home/coder/.go/bin /home/coder/.cargo/bin /home/coder/.local/pip/bin"
 
-          shell_path=$(docker run --rm --entrypoint /bin/bash code-server-omp:test -i -c 'echo "$PATH"' 2>&1)
+          shell_path=$(docker run --rm --entrypoint /bin/bash agent-code-server:test -i -c 'echo "$PATH"' 2>&1)
           echo "Fresh shell PATH: ${shell_path}"
 
           failures=0
@@ -138,7 +138,7 @@ jobs:
         run: |
           echo "=== Coder shell: id / HOME / PATH / bun / node / npm / tmux ==="
           failures=0
-          result=$(docker run --rm --entrypoint /bin/bash code-server-omp:test -c '
+          result=$(docker run --rm --entrypoint /bin/bash agent-code-server:test -c '
             gosu coder bash -ilc '\''
               echo "ID: $(id)"
               echo "HOME: ${HOME}"
@@ -209,7 +209,7 @@ jobs:
       - name: Verify entrypoint does not exit immediately (no volumes)
         run: |
           echo "=== Entrypoint startup check ==="
-          container_id=$(docker run -d --rm code-server-omp:test 2>&1) || {
+          container_id=$(docker run -d --rm agent-code-server:test 2>&1) || {
             echo "Container failed to start (expected without volumes)"
             echo "OK: quick-start not required"
             exit 0
@@ -230,8 +230,8 @@ jobs:
         run: |
           echo "## Baked Tools Check" >> "${GITHUB_STEP_SUMMARY}"
           echo "" >> "${GITHUB_STEP_SUMMARY}"
-          echo "Image: code-server-omp:test" >> "${GITHUB_STEP_SUMMARY}"
+          echo "Image: agent-code-server:test" >> "${GITHUB_STEP_SUMMARY}"
           echo "" >> "${GITHUB_STEP_SUMMARY}"
-          docker images --filter=reference='code-server-omp:test' --format '{{.CreatedAt}}' | head -1 | while read -r created; do
+          docker images --filter=reference='agent-code-server:test' --format '{{.CreatedAt}}' | head -1 | while read -r created; do
             echo "Built: ${created}" >> "${GITHUB_STEP_SUMMARY}"
           done

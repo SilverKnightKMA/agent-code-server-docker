@@ -1,8 +1,8 @@
 {
-  "name": "code-server-omp-docker-toolchain",
+  "name": "agent-code-server-docker-toolchain",
   "version": "1.0.0",
   "private": true,
-  "description": "Managed toolchain scripts for code-server-omp Docker image.",
+  "description": "Managed toolchain scripts for agent-code-server Docker image.",
   "license": "MIT",
   "scripts": {
     "validate:managed-tools": "node scripts/validate-managed-tools.mjs",

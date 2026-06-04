@@ -51,7 +51,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/code-server-omp
+  IMAGE_NAME: ${{ github.repository_owner }}/agent-code-server
 
 jobs:
   build:
@@ -150,7 +150,7 @@ jobs:
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.description=Docker image with code-server + oh-my-pi (omp)
-            io.codeserver-omp.builder-scope-sha=${{ steps.builder_scope.outputs.builder_scope_sha }}
+            io.agent-code-server.builder-scope-sha=${{ steps.builder_scope.outputs.builder_scope_sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

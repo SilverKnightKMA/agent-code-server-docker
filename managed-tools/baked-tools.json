@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "comment": "Inventory of baked-in tools in the code-server-omp Docker image. Every tool must have a monitor type.",
+  "comment": "Inventory of baked-in tools in the agent-code-server Docker image. Every tool must have a monitor type.",
   "tools": [
     {
       "name": "code-server",

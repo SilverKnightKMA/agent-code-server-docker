@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes how the baked-in tools of the code-server-omp Docker
+This document describes how the baked-in tools of the agent-code-server Docker
 image are monitored for updates, and what must happen when a baked tool needs
 an upgrade.
 

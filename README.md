@@ -1,8 +1,8 @@
 # code-server-omp-docker
 
-code-server (VS Code trong browser) + oh-my-pi (omp coding agent) trong một Docker image, với kiến trúc 3-tier tool và DinD tùy chọn.
+code-server (VS Code in browser) + oh-my-pi (omp coding agent) in a single Docker image, with 3-tier tooling and optional DinD.
 
-## Yêu cầu
+## Requirements
 
 - Docker Engine + Docker Compose
 - ~4GB RAM, ~2GB disk
@@ -13,7 +13,7 @@ code-server (VS Code trong browser) + oh-my-pi (omp coding agent) trong một Do
 git clone https://github.com/SilverKnightKMA/code-server-omp-docker.git
 cd code-server-omp-docker
 
-# 1. Tạo toàn bộ data directories (bao gồm dedicated code-server mounts)
+# 1. Create all data directories (including dedicated code-server mounts)
 mkdir -p \
   data/workspaces \
   data/ssh \
@@ -25,8 +25,8 @@ mkdir -p \
   data/code-server-omp-cache data/tmux-state \
   data/entrypoint.d
 
-# 2. Set ownership (UID 1000 = coder trong container)
-# Bỏ qua nếu data/ chưa tồn tại; chạy sau khi tạo lần đầu.
+# 2. Set ownership (UID 1000 = coder inside container)
+# Skip if data/ does not exist yet; run after first creation.
 sudo chown -R 1000:1000 \
   data/workspaces \
   data/ssh \
@@ -37,7 +37,7 @@ sudo chown -R 1000:1000 \
   data/code-server-omp-cache data/tmux-state \
   data/entrypoint.d
 
-# KHÔNG chown /var/lib/docker hoặc /var/lib/containerd
+# DO NOT chown /var/lib/docker or /var/lib/containerd
 
 # 3. Build image
 docker compose build
@@ -45,22 +45,20 @@ docker compose build
 # 4. Start container
 docker compose up -d
 
-# 5. Mở http://localhost:8880
+# 5. Open http://localhost:8880
 ```
 
-Mặc định, `omp` và các managed tools khác chỉ được cài vào volume khi bạn bật `CODE_SERVER_OMP_AUTOINSTALL: "true"` trong compose hoặc chạy `npm run --prefix /opt/code-server-omp/managed-tools managed-tools:init` bên trong container.
+By default, `omp` and other managed tools are only installed into the volume when you set `CODE_SERVER_OMP_AUTOINSTALL: "true"` in compose or run `npm run --prefix /opt/code-server-omp/managed-tools managed-tools:init` inside the container.
 
-## Host-side preparation (chi tiết)
+## Host-side preparation (details)
 
-### Tạo data directories
+### Create data directories
 
-Tất cả volume mounts cần thư mục host tương ứng. Nếu thiếu, Docker tự tạo với quyền
-`root:root`. Khi container chạy với `user: root` (bắt buộc cho DinD), entrypoint
-sẽ tạo subdirs và chown chúng. Nhưng host-prep giúp tránh lỗi ngay từ đầu.
+All volume mounts need corresponding host directories. If missing, Docker creates them with `root:root` ownership. When the container runs with `user: root` (required for DinD), the entrypoint creates subdirectories and chowns them. However, host-prep avoids errors from the start.
 
 ### Set ownership
 
-UID 1000 trong container là `coder`. Để bind-mounted directories có thể write:
+UID 1000 inside the container is `coder`. To make bind-mounted directories writable:
 
 ```bash
 sudo chown 1000:1000 \
@@ -88,14 +86,14 @@ cp ~/.gitconfig data/config/git/config
 chown -R 1000:1000 data/config/git
 ```
 
-## Sau khi container chạy
+## After container starts
 
 ```bash
-docker compose logs -f                    # Theo dõi log
-docker compose exec -u coder code-server-omp bash   # Vào container
+docker compose logs -f                    # Follow logs
+docker compose exec -u coder code-server-omp bash   # Enter container
 ```
 
-### Kiểm tra DinD
+### Check DinD
 
 ```bash
 docker compose exec code-server-omp docker info
@@ -104,10 +102,10 @@ docker compose exec code-server-omp docker compose version
 
 ## Docker-in-Docker
 
-Mặc định container chạy với `USER root`; entrypoint tự start DinD nếu có env.
-code-server luôn chạy dưới user `coder` qua `gosu`.
+By default the container runs with `USER root`; entrypoint starts DinD if env is set.
+code-server always runs as user `coder` via `gosu`.
 
-Bật DinD bằng cách uncomment trong `docker-compose.yml`:
+Enable DinD by uncommenting in `docker-compose.yml`:
 
 ```yaml
 environment:
@@ -123,14 +121,14 @@ volumes:
   - ./data/containerd:/var/lib/containerd
 ```
 
-Container phải chạy với root để dockerd start. `coder` được thêm vào group `docker`
-để dùng `docker info` mà không cần sudo.
+The container must run as root for dockerd to start. `coder` is added to the `docker`
+group so it can run `docker info` without sudo.
 
-Không bật DinD → không cần privileged, workload chạy an toàn.
+Without DinD → no privileged mode needed, workloads run safely.
 
 ## Diagnostics
 
-Nếu vẫn gặp lỗi EACCES, vào container:
+If you still encounter EACCES errors, enter the container:
 
 ```bash
 docker compose exec code-server-omp bash -c 'id; ls -ldn /home/coder /home/coder/.config /home/coder/.local /home/coder/.cache /home/coder/.config/code-server'
@@ -146,14 +144,14 @@ drwxr-xr-x 1000 1000 ... /home/coder/.local
 drwxr-xr-x 1000 1000 ... /home/coder/.cache
 ```
 
-## Kiến trúc 3-tier
+## 3-tier architecture
 
-| Tier | Ví dụ | Persist |
-|------|-------|---------|
-| **1. Baked-in** | code-server, Node.js, Bun, Python, Git, tmux, Docker CLI | Trong image |
-| **2. Managed mounted** | omp, TypeScript LSP, Go, Rust, gh, yq, ripgrep | Volume data/ |
+| Tier | Examples | Persist |
+|------|----------|---------|
+| **1. Baked-in** | code-server, Node.js, Bun, Python, Git, tmux, Docker CLI | In image |
+| **2. Managed mounted** | omp, pi, TypeScript LSP, Go, Rust, gh, yq, ripgrep | Volume data/ |
 | **3. Custom mounted** | npm install -g, go install, cargo install | Volume data/ |
 
 ## Ports
 
-- `8080` (mặc định), map qua `8880` trong compose mẫu
+- `8080` (default), mapped to `8880` in the sample compose

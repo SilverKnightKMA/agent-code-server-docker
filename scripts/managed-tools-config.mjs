@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { formatFields } from "./managed-tools-output.mjs";
 
-const defaultBaseUrl = "https://raw.githubusercontent.com/SilverKnightKMA/code-server-omp-docker/main/managed-tools";
+const defaultBaseUrl = "https://raw.githubusercontent.com/SilverKnightKMA/agent-code-server-docker/main/managed-tools";
 const configFiles = ["manifest.json", "policy.json"];
 const defaultXdgCacheHome = path.join(os.homedir(), ".cache");
 
@@ -14,21 +14,21 @@ function normalizePath(value) {
 
 function cacheDir() {
   const xdgCacheHome = process.env.XDG_CACHE_HOME ?? defaultXdgCacheHome;
-  return normalizePath(process.env.CODE_SERVER_OMP_CONFIG_CACHE_DIR
-    ?? path.join(xdgCacheHome, "code-server-omp", "config"));
+  return normalizePath(process.env.AGENT_CODE_SERVER_CONFIG_CACHE_DIR
+    ?? path.join(xdgCacheHome, "agent-code-server", "config"));
 }
 
 function configMode() {
-  const mode = (process.env.CODE_SERVER_OMP_MANAGED_TOOLS_CONFIG_MODE
-    ?? process.env.CODE_SERVER_OMP_CONFIG_SOURCE
+  const mode = (process.env.AGENT_CODE_SERVER_MANAGED_TOOLS_CONFIG_MODE
+    ?? process.env.AGENT_CODE_SERVER_CONFIG_SOURCE
     ?? "auto").toLowerCase();
   if (["auto", "online", "baked"].includes(mode)) return mode;
-  throw new Error(`CODE_SERVER_OMP_MANAGED_TOOLS_CONFIG_MODE must be auto, online, or baked; got ${mode}`);
+  throw new Error(`AGENT_CODE_SERVER_MANAGED_TOOLS_CONFIG_MODE must be auto, online, or baked; got ${mode}`);
 }
 
 function allowBakedFallback() {
-  const val = process.env.CODE_SERVER_OMP_MANAGED_TOOLS_ALLOW_BAKED_FALLBACK
-    ?? process.env.CODE_SERVER_OMP_ALLOW_BAKED_FALLBACK
+  const val = process.env.AGENT_CODE_SERVER_MANAGED_TOOLS_ALLOW_BAKED_FALLBACK
+    ?? process.env.AGENT_CODE_SERVER_ALLOW_BAKED_FALLBACK
     ?? "";
   return val === "true" || val === "1";
 }
@@ -42,17 +42,17 @@ function normalizeBaseUrl(value) {
 }
 
 function configBaseUrl() {
-  const url = process.env.CODE_SERVER_OMP_MANAGED_TOOLS_BASE_URL
-    ?? process.env.CODE_SERVER_OMP_CONFIG_BASE_URL
+  const url = process.env.AGENT_CODE_SERVER_MANAGED_TOOLS_BASE_URL
+    ?? process.env.AGENT_CODE_SERVER_CONFIG_BASE_URL
     ?? defaultBaseUrl;
   return normalizeBaseUrl(url);
 }
 
 function fetchTimeoutMs() {
-  const raw = process.env.CODE_SERVER_OMP_CONFIG_TIMEOUT_MS ?? "5000";
+  const raw = process.env.AGENT_CODE_SERVER_CONFIG_TIMEOUT_MS ?? "5000";
   const timeout = Number.parseInt(raw, 10);
   if (Number.isFinite(timeout) && timeout > 0) return timeout;
-  throw new Error(`CODE_SERVER_OMP_CONFIG_TIMEOUT_MS must be a positive integer; got ${raw}`);
+  throw new Error(`AGENT_CODE_SERVER_CONFIG_TIMEOUT_MS must be a positive integer; got ${raw}`);
 }
 
 function parseConfig(text, fileName, source) {
@@ -89,7 +89,7 @@ async function fetchConfigFile(baseUrl, fileName, timeoutMs) {
   try {
     const response = await fetch(url, {
       signal: controller.signal,
-      headers: { Accept: "application/json", "User-Agent": "code-server-omp-managed-tools" },
+      headers: { Accept: "application/json", "User-Agent": "agent-code-server-managed-tools" },
     });
     if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
     const text = await response.text();
@@ -164,7 +164,7 @@ export async function loadManagedToolsConfig(repoRoot) {
     // auto mode: hard-fail unless explicitly allowed to fall back to baked
     if (!allowBaked && mode !== "baked") {
       throw new Error(`[config] online config fetch failed and baked fallback is not enabled. `
-        + `Set CODE_SERVER_OMP_MANAGED_TOOLS_ALLOW_BAKED_FALLBACK=true to use baked config as an offline fallback.`);
+        + `Set AGENT_CODE_SERVER_MANAGED_TOOLS_ALLOW_BAKED_FALLBACK=true to use baked config as an offline fallback.`);
     }
   }
 

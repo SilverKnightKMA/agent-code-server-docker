@@ -1,7 +1,7 @@
 services:
-  code-server-omp:
-    image: ghcr.io/code-server-omp/code-server-omp:latest
-    container_name: code-server-omp
+  agent-code-server:
+    image: ghcr.io/agent-code-server/agent-code-server:latest
+    container_name: agent-code-server
     init: true
     mem_limit: 4g
     ports:
@@ -10,11 +10,11 @@ services:
       - "host.docker.internal:host-gateway"
     environment:
       DOCKER_USER: "${USER:-coder}"
-      CODE_SERVER_OMP_CONFIG_SOURCE: auto
-      CODE_SERVER_OMP_CONFIG_CACHE_DIR: /home/coder/.local/state/code-server-omp/config
+      AGENT_CODE_SERVER_CONFIG_SOURCE: auto
+      AGENT_CODE_SERVER_CONFIG_CACHE_DIR: /home/coder/.local/state/agent-code-server/config
       NPM_CONFIG_CACHE: /home/coder/.npm
-      CODE_SERVER_OMP_TMPDIR: /home/coder/.local/state/code-server-omp/tmp
-      # CODE_SERVER_OMP_AUTOINSTALL: "true"  # install managed tools (including omp) on startup
+      AGENT_CODE_SERVER_TMPDIR: /home/coder/.local/state/agent-code-server/tmp
+      # AGENT_CODE_SERVER_AUTOINSTALL: "true"  # install managed tools (including omp) on startup
       # UI_PASSWORD: change-me
       # ENABLE_DIND: "true" — requires privileged & /var/lib/docker volume
 
@@ -44,9 +44,9 @@ services:
       - ./data/go:/home/coder/.go
 
       # Managed runtime state
-      - ./data/code-server-omp-cache:/home/coder/.local/state/code-server-omp
+      - ./data/agent-code-server-cache:/home/coder/.local/state/agent-code-server
 
-      # Optional tmux persistence (uncomment when CODE_SERVER_OMP_TMUX_PERSIST=true)
+      # Optional tmux persistence (uncomment when AGENT_CODE_SERVER_TMUX_PERSIST=true)
       # - ./data/tmux-state:/home/coder/.local/state/tmux
 
       # Optional startup scripts

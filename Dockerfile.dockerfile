@@ -1,14 +1,14 @@
 # syntax=docker/dockerfile:1
 #
-# code-server-omp-docker
+# agent-code-server-docker
 # =======================
 # code-server + oh-my-pi (omp) in a single image.
 # Three-tier tooling: baked-in core, managed mounted tools, custom user tools.
 #
 # Build:
 #   docker build \
-#     --build-context toolchain=code-server-omp-docker \
-#     -t code-server-omp:latest \
+#     --build-context toolchain=agent-code-server-docker \
+#     -t agent-code-server:latest \
 #     code-server
 #
 # (where "code-server" is the upstream coder/code-server checkout)
@@ -21,13 +21,13 @@ FROM oven/bun:1.3.14@sha256:e10577f0db68676a7024391c6e5cb4b879ebd17188ab750cf100
 # the managed-tools scripts and config without copying the builder
 # repo into the upstream source tree.
 FROM scratch AS toolchain
-COPY package.json package-lock.json go.mod go.sum tools.go /opt/code-server-omp/managed-tools/
-COPY managed-tools/ /opt/code-server-omp/managed-tools/managed-tools/
-COPY scripts/ /opt/code-server-omp/managed-tools/scripts/
-COPY scripts/code-server-entrypoint.sh /usr/local/bin/code-server-omp-entrypoint
-COPY .tmux.conf /opt/code-server-omp/managed-tools/.tmux.conf
-COPY vendor/tmux-resurrect /opt/code-server-omp/managed-tools/vendor/tmux-resurrect
-COPY vendor/tmux-continuum /opt/code-server-omp/managed-tools/vendor/tmux-continuum
+COPY package.json package-lock.json go.mod go.sum tools.go /opt/agent-code-server/managed-tools/
+COPY managed-tools/ /opt/agent-code-server/managed-tools/managed-tools/
+COPY scripts/ /opt/agent-code-server/managed-tools/scripts/
+COPY scripts/code-server-entrypoint.sh /usr/local/bin/agent-code-server-entrypoint
+COPY .tmux.conf /opt/agent-code-server/managed-tools/.tmux.conf
+COPY vendor/tmux-resurrect /opt/agent-code-server/managed-tools/vendor/tmux-resurrect
+COPY vendor/tmux-continuum /opt/agent-code-server/managed-tools/vendor/tmux-continuum
 
 # ── Stage: code-server build ────────────────────────────────────────
 FROM debian:13-slim@sha256:b6e2a152f22a40ff69d92cb397223c906017e1391a73c952b588e51af8883bf8 AS code-server-builder
@@ -127,12 +127,12 @@ RUN ARCH="$(dpkg --print-architecture)" \
   && printf "user: coder\ngroup: coder\n" > /etc/fixuid/config.yml
 
 # ── Toolchain scripts & config ──────────────────────────────────────
-COPY --from=toolchain /opt/code-server-omp /opt/code-server-omp
-COPY --from=toolchain /usr/local/bin/code-server-omp-entrypoint /usr/local/bin/code-server-omp-entrypoint
-COPY --from=toolchain /opt/code-server-omp/managed-tools/.tmux.conf /etc/tmux.conf
-COPY --from=toolchain /opt/code-server-omp/managed-tools/scripts/tmux-persist.conf.sh /usr/local/bin/code-server-omp-tmux-persist-conf
-COPY --from=toolchain /opt/code-server-omp/managed-tools/vendor/tmux-resurrect /usr/local/share/code-server-omp/tmux/tmux-resurrect
-COPY --from=toolchain /opt/code-server-omp/managed-tools/vendor/tmux-continuum /usr/local/share/code-server-omp/tmux/tmux-continuum
+COPY --from=toolchain /opt/agent-code-server /opt/agent-code-server
+COPY --from=toolchain /usr/local/bin/agent-code-server-entrypoint /usr/local/bin/agent-code-server-entrypoint
+COPY --from=toolchain /opt/agent-code-server/managed-tools/.tmux.conf /etc/tmux.conf
+COPY --from=toolchain /opt/agent-code-server/managed-tools/scripts/tmux-persist.conf.sh /usr/local/bin/agent-code-server-tmux-persist-conf
+COPY --from=toolchain /opt/agent-code-server/managed-tools/vendor/tmux-resurrect /usr/local/share/agent-code-server/tmux/tmux-resurrect
+COPY --from=toolchain /opt/agent-code-server/managed-tools/vendor/tmux-continuum /usr/local/share/agent-code-server/tmux/tmux-continuum
 
 # ── Docker-in-Docker binaries ─────────────────────────────────────
 COPY --from=docker-dind /usr/local/bin/ /usr/local/bin/
@@ -159,8 +159,8 @@ ENV XDG_CACHE_HOME=/home/coder/.cache
 ENV XDG_CONFIG_HOME=/home/coder/.config
 ENV XDG_DATA_HOME=/home/coder/.local/share
 ENV XDG_STATE_HOME=/home/coder/.local/state
-ENV CODE_SERVER_OMP_CONFIG_CACHE_DIR=/home/coder/.local/state/code-server-omp/config
-ENV CODE_SERVER_OMP_TMPDIR=/home/coder/.local/state/code-server-omp/tmp
+ENV AGENT_CODE_SERVER_CONFIG_CACHE_DIR=/home/coder/.local/state/agent-code-server/config
+ENV AGENT_CODE_SERVER_TMPDIR=/home/coder/.local/state/agent-code-server/tmp
 ENV TMUX_TMPDIR=/home/coder/.local/state/tmux/socket
 ENV ENTRYPOINTD=/home/coder/entrypoint.d
 
@@ -193,7 +193,7 @@ RUN mkdir -p \
 # loaded by login shells, so source it from /etc/bash.bashrc.
 RUN mkdir -p /etc/profile.d \
   && printf '%s\n' \
-    '# code-server-omp: PATH, managed-tools hints, tmux defaults, and shell environment' \
+    '# agent-code-server: PATH, managed-tools hints, tmux defaults, and shell environment' \
     '# This script is sourced from /etc/bash.bashrc and /etc/profile' \
     '' \
     'BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"' \
@@ -211,26 +211,26 @@ RUN mkdir -p /etc/profile.d \
     'mkdir -p "$TMUX_TMPDIR" 2>/dev/null || true' \
     '' \
     'if [ -n "${BASH_VERSION:-}" ] && [ -n "${PS1:-}" ]; then' \
-    '  if [ -z "${CODE_SERVER_OMP_SHELL_HINT_SHOWN:-}" ]; then' \
-    '    export CODE_SERVER_OMP_SHELL_HINT_SHOWN=1' \
-    '    printf "\\n[code-server-omp] Managed tools persist under %s\\n" "$HOME"' \
-    '    printf "[code-server-omp] Install/update pinned tools: npm run --prefix /opt/code-server-omp/managed-tools managed-tools:init\\n"' \
-    '    printf "[code-server-omp] Check status: npm run --prefix /opt/code-server-omp/managed-tools managed-tools:status\\n"' \
-    '    printf "[code-server-omp] Managed npm tools live in %s\\n" "$NPM_CONFIG_PREFIX"' \
-    '    printf "[code-server-omp] tmux socket dir: %s\\n" "$TMUX_TMPDIR"' \
-    '    printf "[code-server-omp] Dump pane: tmux capture-pane -p -S - > tmux-pane.txt\\n"' \
-    '    printf "[code-server-omp] Live log:  tmux pipe-pane -o '\''cat >> tmux-live.log'\''\\n"' \
-    '    if [ "${CODE_SERVER_OMP_TMUX_PERSIST:-false}" = "true" ] || [ "${CODE_SERVER_OMP_TMUX_PERSIST:-false}" = "1" ]; then' \
-    '      printf "[code-server-omp] tmux persistence: enabled (socket dir + resurrect state under %s)\\n" "$XDG_STATE_HOME/tmux"' \
+    '  if [ -z "${AGENT_CODE_SERVER_SHELL_HINT_SHOWN:-}" ]; then' \
+    '    export AGENT_CODE_SERVER_SHELL_HINT_SHOWN=1' \
+    '    printf "\\n[agent-code-server] Managed tools persist under %s\\n" "$HOME"' \
+    '    printf "[agent-code-server] Install/update pinned tools: npm run --prefix /opt/agent-code-server/managed-tools managed-tools:init\\n"' \
+    '    printf "[agent-code-server] Check status: npm run --prefix /opt/agent-code-server/managed-tools managed-tools:status\\n"' \
+    '    printf "[agent-code-server] Managed npm tools live in %s\\n" "$NPM_CONFIG_PREFIX"' \
+    '    printf "[agent-code-server] tmux socket dir: %s\\n" "$TMUX_TMPDIR"' \
+    '    printf "[agent-code-server] Dump pane: tmux capture-pane -p -S - > tmux-pane.txt\\n"' \
+    '    printf "[agent-code-server] Live log:  tmux pipe-pane -o '\''cat >> tmux-live.log'\''\\n"' \
+    '    if [ "${AGENT_CODE_SERVER_TMUX_PERSIST:-false}" = "true" ] || [ "${AGENT_CODE_SERVER_TMUX_PERSIST:-false}" = "1" ]; then' \
+    '      printf "[agent-code-server] tmux persistence: enabled (socket dir + resurrect state under %s)\\n" "$XDG_STATE_HOME/tmux"' \
     '    else' \
-    '      printf "[code-server-omp] tmux persistence: disabled (set CODE_SERVER_OMP_TMUX_PERSIST=true to enable)\\n"' \
+    '      printf "[agent-code-server] tmux persistence: disabled (set AGENT_CODE_SERVER_TMUX_PERSIST=true to enable)\\n"' \
     '    fi' \
     '    printf "\\n"' \
     '  fi' \
-    '  printf "[code-server-omp] Tip: hold Shift while dragging to select/copy text when tmux mouse mode is on.\\n"' \
+    '  printf "[agent-code-server] Tip: hold Shift while dragging to select/copy text when tmux mouse mode is on.\\n"' \
     'fi' \
-    > /etc/profile.d/code-server-omp-path.sh \
-  && printf '\n# code-server-omp\n. /etc/profile.d/code-server-omp-path.sh\n' >> /etc/bash.bashrc
+    > /etc/profile.d/agent-code-server-path.sh \
+  && printf '\n# agent-code-server\n. /etc/profile.d/agent-code-server-path.sh\n' >> /etc/bash.bashrc
 
 # ── Entrypoint.d scripts (run on container start) ───────────────────
 # Users can mount scripts here to customize workspace initialization.
@@ -241,4 +241,4 @@ EXPOSE 8080
 USER root
 WORKDIR /home/coder
 
-ENTRYPOINT ["/usr/local/bin/code-server-omp-entrypoint"]
+ENTRYPOINT ["/usr/local/bin/agent-code-server-entrypoint"]

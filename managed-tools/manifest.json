@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "comment": "Managed tool manifest for code-server-omp-docker. Pinned versions for 3-tier dev tools.",
+  "comment": "Managed tool manifest for agent-code-server-docker. Pinned versions for 3-tier dev tools.",
   "families": {
     "npm": {
       "comment": "npm-managed JS/TS language servers and essential coding tools, including omp",

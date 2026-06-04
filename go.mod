@@ -1,4 +1,4 @@
-module github.com/code-server-omp/code-server-omp-docker
+module github.com/agent-code-server/agent-code-server-docker
 
 go 1.26.0
 

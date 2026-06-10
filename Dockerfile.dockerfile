@@ -225,9 +225,9 @@ RUN mkdir -p /etc/profile.d \
     '    else' \
     '      printf "[agent-code-server] tmux persistence: disabled (set AGENT_CODE_SERVER_TMUX_PERSIST=true to enable)\\n"' \
     '    fi' \
+    '    printf "[agent-code-server] Tip: hold Shift while dragging to select/copy text when tmux mouse mode is on.\\n"' \
     '    printf "\\n"' \
     '  fi' \
-    '  printf "[agent-code-server] Tip: hold Shift while dragging to select/copy text when tmux mouse mode is on.\\n"' \
     'fi' \
     > /etc/profile.d/agent-code-server-path.sh \
   && printf '\n# agent-code-server\n. /etc/profile.d/agent-code-server-path.sh\n' >> /etc/bash.bashrc

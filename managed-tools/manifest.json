@@ -17,12 +17,12 @@
         {
           "name": "eslint",
           "pkg": "eslint",
-          "version": "10.4.1"
+          "version": "10.5.0"
         },
         {
           "name": "prettier",
           "pkg": "prettier",
-          "version": "3.8.3"
+          "version": "3.8.4"
         },
         {
           "name": "typescript",
@@ -47,12 +47,12 @@
         {
           "name": "omp",
           "pkg": "@oh-my-pi/pi-coding-agent",
-          "version": "15.10.3"
+          "version": "15.13.2"
         },
         {
           "name": "pi",
           "pkg": "@earendil-works/pi-coding-agent",
-          "version": "0.78.1"
+          "version": "0.79.4"
         }
       ]
     },
@@ -107,7 +107,7 @@
       "tools": [
         {
           "name": "gh",
-          "version": "2.93.0",
+          "version": "2.94.0",
           "repo": "cli/cli",
           "os": "linux",
           "arch": "amd64",

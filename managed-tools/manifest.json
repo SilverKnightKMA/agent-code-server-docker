@@ -47,12 +47,12 @@
         {
           "name": "omp",
           "pkg": "@oh-my-pi/pi-coding-agent",
-          "version": "15.13.2"
+          "version": "16.1.14"
         },
         {
           "name": "pi",
           "pkg": "@earendil-works/pi-coding-agent",
-          "version": "0.79.4"
+          "version": "0.79.10"
         }
       ]
     },
@@ -68,7 +68,7 @@
       "tools": [
         {
           "name": "go",
-          "version": "1.26.4",
+          "version": "1.27rc1",
           "os": "linux",
           "arch": "amd64",
           "assetPattern": "go{version}.linux-amd64.tar.gz"
@@ -107,7 +107,7 @@
       "tools": [
         {
           "name": "gh",
-          "version": "2.94.0",
+          "version": "2.95.0",
           "repo": "cli/cli",
           "os": "linux",
           "arch": "amd64",

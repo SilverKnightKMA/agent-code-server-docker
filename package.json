@@ -23,9 +23,9 @@
   },
   "dependencies": {
     "bash-language-server": "5.6.0",
-    "eslint": "10.4.1",
-    "prettier": "3.8.3",
-    "pyright": "1.1.410",
+    "eslint": "10.6.0",
+    "prettier": "3.9.4",
+    "pyright": "1.1.411",
     "typescript": "6.0.3",
     "typescript-language-server": "5.3.0",
     "yaml-language-server": "1.23.0"

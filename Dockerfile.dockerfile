@@ -30,7 +30,7 @@ COPY vendor/tmux-resurrect /opt/agent-code-server/managed-tools/vendor/tmux-resu
 COPY vendor/tmux-continuum /opt/agent-code-server/managed-tools/vendor/tmux-continuum
 
 # ── Stage: code-server build ────────────────────────────────────────
-FROM debian:13-slim@sha256:b6e2a152f22a40ff69d92cb397223c906017e1391a73c952b588e51af8883bf8 AS code-server-builder
+FROM debian:13-slim@sha256:4e401d95de7083948053197a9c3913343cd06b706bf15eb6a0c3ccd26f436a0e AS code-server-builder
 
 # We copy code-server from the official release .deb rather than building
 # from source. This stage pins the exact version and architecture.
@@ -47,10 +47,10 @@ RUN curl -fsSL "https://github.com/coder/code-server/releases/download/v${CODE_S
     -o /tmp/code-server.deb
 
 # ── Stage: Docker-in-Docker ────────────────────────────────────────
-FROM docker:29.5.3-dind@sha256:7d85d0eda291f1a7ab6df4a9d1802b5ad4cf9145a088bd11188c78dcb5c7392b AS docker-dind
+FROM docker:29.6.1-dind@sha256:66d292e5c26bd33a6f6f61cacb880de2186339a524ecba1ce098dbbaceed6515 AS docker-dind
 
 # ── Stage: runtime ──────────────────────────────────────────────────
-FROM debian:13-slim@sha256:b6e2a152f22a40ff69d92cb397223c906017e1391a73c952b588e51af8883bf8 AS runtime
+FROM debian:13-slim@sha256:4e401d95de7083948053197a9c3913343cd06b706bf15eb6a0c3ccd26f436a0e AS runtime
 
 ENV DEBIAN_FRONTEND=noninteractive
 

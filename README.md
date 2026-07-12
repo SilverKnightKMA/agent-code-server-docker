@@ -180,7 +180,41 @@ agent CLIs (`omp`, `pi`, `opencode`, `claude`, `codex`, `droid`, `copilot`) alre
   upstream source before assuming a new agent follows one of these same
   conventions.
 
+### Self-hosted relay server (optional)
+
+The image also bundles [paseo-relay](https://github.com/zenghongtu/paseo-relay),
+a zero-knowledge WebSocket relay that bridges the Paseo daemon and the mobile
+app when they cannot connect directly. It is disabled by default.
+
+To enable, set `ENABLE_PASEO_RELAY=true` and expose port `8411` in compose:
+
+```yaml
+ports:
+  - "8411:8411"
+environment:
+  ENABLE_PASEO_RELAY: "true"
+```
+
+Then point the Paseo daemon at the relay by adding to `~/.paseo/config.json`:
+
+```json
+{
+  "daemon": {
+    "relay": {
+      "enabled": true,
+      "endpoint": "your-host:8411",
+      "publicEndpoint": "your-host:8411"
+    }
+  }
+}
+```
+
+The relay is untrusted by design — all traffic is E2E encrypted by Paseo.
+TLS should be terminated upstream (nginx, Caddy, Cloudflare Tunnel, etc.);
+do not expose the relay over plain HTTP in production.
+
 ## Ports
 
 - `8080` (default), mapped to `8880` in the sample compose — code-server
 - `6767` — Paseo daemon + web UI
+- `8411` — Paseo self-hosted relay server (disabled by default, enable with `ENABLE_PASEO_RELAY=true`)

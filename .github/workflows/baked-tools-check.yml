@@ -69,7 +69,7 @@ jobs:
       - name: Verify baked commands exist
         run: |
           failures=0
-          for cmd in code-server node npm bun docker dockerd fixuid gosu dumb-init git curl jq python3 pip tmux paseo; do
+          for cmd in code-server node npm bun docker dockerd fixuid gosu dumb-init git curl jq python3 pip tmux paseo paseo-relay; do
             result=$(docker run --rm --entrypoint /bin/bash agent-code-server:test -c "command -v ${cmd}" 2>&1) || true
             if [ -n "${result}" ]; then
               echo "OK: ${cmd} found at ${result}"
@@ -88,7 +88,7 @@ jobs:
       - name: Verify baked tool versions
         run: |
           failures=0
-          for cmd in code-server node npm bun docker dockerd git python3 tmux paseo; do
+          for cmd in code-server node npm bun docker dockerd git python3 tmux paseo paseo-relay; do
             echo "=== ${cmd} --version ==="
             version=$(docker run --rm --entrypoint /bin/bash agent-code-server:test -c "if [ \"${cmd}\" = tmux ]; then tmux -V; else ${cmd} --version; fi 2>&1" || echo "VERSION CHECK FAILED")
             echo "${version}"

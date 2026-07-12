@@ -355,6 +355,14 @@ if [ -d "${ENTRYPOINTD:-/home/coder/entrypoint.d}" ]; then
   find "${ENTRYPOINTD:-/home/coder/entrypoint.d}" -maxdepth 1 -type f -executable -print -exec {} \;
 fi
 
+# ── Paseo relay server (optional self-hosted relay) ──────────────────
+if [ "${ENABLE_PASEO_RELAY:-false}" = "true" ]; then
+  echo "[entrypoint] starting paseo-relay on ${RELAY_ADDR:-:8411}..."
+  RELAY_ADDR="${RELAY_ADDR:-:8411}" \
+  LOG_FORMAT="${PASEO_LOG_FORMAT:-json}" \
+    paseo-relay &
+fi
+
 # ── Paseo daemon (baked Tier 1 service, runs alongside code-server) ──
 if [ -z "${PASEO_PASSWORD-}" ]; then
   echo "[paseo] WARNING: PASEO_PASSWORD is not set." >&2

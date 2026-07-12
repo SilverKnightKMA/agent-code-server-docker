@@ -1,6 +1,6 @@
 # agent-code-server-docker
 
-code-server (VS Code in browser) with your choice of AI coding agents (omp, pi, and more) in a single Docker image, with 3-tier tooling and optional DinD.
+code-server (VS Code in browser) with your choice of AI coding agents (omp, pi, and more) in a single Docker image, with 3-tier tooling and optional DinD. Also bakes in [Paseo](https://github.com/getpaseo/paseo), a daemon + web UI for orchestrating those agents, running alongside code-server in the same container.
 
 ## Requirements
 
@@ -23,7 +23,8 @@ mkdir -p \
   data/local-bin data/local-go data/local-pip \
   data/cargo data/rustup data/go \
   data/agent-code-server-cache data/tmux-state \
-  data/entrypoint.d
+  data/entrypoint.d \
+  data/paseo data/config/claude data/config/codex
 
 # 2. Set ownership (UID 1000 = coder inside container)
 # Skip if data/ does not exist yet; run after first creation.
@@ -35,7 +36,8 @@ sudo chown -R 1000:1000 \
   data/local-bin data/local-go data/local-pip \
   data/cargo data/rustup data/go \
   data/agent-code-server-cache data/tmux-state \
-  data/entrypoint.d
+  data/entrypoint.d \
+  data/paseo
 
 # DO NOT chown /var/lib/docker or /var/lib/containerd
 
@@ -68,7 +70,8 @@ sudo chown 1000:1000 \
   data/local-bin data/local-go data/local-pip \
   data/cargo data/rustup data/go \
   data/agent-code-server-cache data/tmux-state \
-  data/entrypoint.d
+  data/entrypoint.d \
+  data/paseo
 ```
 
 ### SSH keys
@@ -148,10 +151,28 @@ drwxr-xr-x 1000 1000 ... /home/coder/.cache
 
 | Tier | Examples | Persist |
 |------|----------|---------|
-| **1. Baked-in** | code-server, Node.js, Bun, Python, Git, tmux, Docker CLI | In image |
-| **2. Managed mounted** | omp, pi, TypeScript LSP, Go, Rust, gh, yq, ripgrep | Volume data/ |
+| **1. Baked-in** | code-server, Paseo, Node.js, Bun, Python, Git, tmux, Docker CLI | In image |
+| **2. Managed mounted** | omp, pi, opencode, claude, codex, droid, TypeScript LSP, Go, Rust, gh, yq, ripgrep | Volume data/ |
 | **3. Custom mounted** | npm install -g, go install, cargo install | Volume data/ |
+
+## Paseo
+
+[Paseo](https://github.com/getpaseo/paseo) is baked into the image (Tier 1,
+alongside code-server) and starts automatically with the container. It shares
+the same `coder` user/home as code-server, so it can launch any of the Tier 2
+agent CLIs (`omp`, `pi`, `opencode`, `claude`, `codex`, `droid`) already on
+`PATH` against the same `/home/coder/workspaces` that code-server edits.
+
+- Web UI: `http://localhost:6767`
+- Set `PASEO_PASSWORD` in compose before exposing port 6767 beyond localhost —
+  without it the daemon logs a warning and accepts unauthenticated control
+  connections.
+- Set `PASEO_HOSTNAMES` if you reach it through a reverse-proxied DNS name.
+- Daemon state and agent credentials persist under `data/paseo`,
+  `data/config/claude`, `data/config/codex` (mounted to `~/.paseo`,
+  `~/.claude`, `~/.codex`).
 
 ## Ports
 
-- `8080` (default), mapped to `8880` in the sample compose
+- `8080` (default), mapped to `8880` in the sample compose — code-server
+- `6767` — Paseo daemon + web UI

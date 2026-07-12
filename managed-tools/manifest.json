@@ -53,6 +53,26 @@
           "name": "pi",
           "pkg": "@earendil-works/pi-coding-agent",
           "version": "0.80.3"
+        },
+        {
+          "name": "opencode",
+          "pkg": "opencode-ai",
+          "version": "1.17.18"
+        },
+        {
+          "name": "claude",
+          "pkg": "@anthropic-ai/claude-code",
+          "version": "2.1.207"
+        },
+        {
+          "name": "codex",
+          "pkg": "@openai/codex",
+          "version": "0.144.1"
+        },
+        {
+          "name": "droid",
+          "pkg": "droid",
+          "version": "0.170.0"
         }
       ]
     },

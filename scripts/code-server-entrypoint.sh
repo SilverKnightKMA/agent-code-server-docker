@@ -351,6 +351,13 @@ if [ -z "${PASEO_PASSWORD-}" ]; then
   echo "[paseo] Set PASEO_PASSWORD for any published port or network-reachable deployment." >&2
 fi
 
+PASEO_WEB_UI_FLAG="--web-ui"
+case "${PASEO_WEB_UI_ENABLED:-true}" in
+  false|0|no)
+    PASEO_WEB_UI_FLAG="--no-web-ui"
+    ;;
+esac
+
 echo "[entrypoint] starting paseo daemon on ${PASEO_LISTEN:-0.0.0.0:6767}..."
 gosu "${RUN_USER}" env \
   HOME="${RUN_HOME}" \
@@ -363,7 +370,7 @@ gosu "${RUN_USER}" env \
   PASEO_HOSTNAMES="${PASEO_HOSTNAMES-}" \
   CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-${RUN_HOME}/.claude}" \
   CODEX_HOME="${CODEX_HOME:-${RUN_HOME}/.codex}" \
-  paseo start --foreground --listen "${PASEO_LISTEN:-0.0.0.0:6767}" --web-ui &
+  paseo start --foreground --listen "${PASEO_LISTEN:-0.0.0.0:6767}" "${PASEO_WEB_UI_FLAG}" &
 
 # ── Launch code-server (with explicit env) ─────────────────────────
 echo "[entrypoint] launching code-server as ${RUN_USER}..."

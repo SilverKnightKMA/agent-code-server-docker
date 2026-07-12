@@ -117,8 +117,7 @@ RUN curl -fsSL https://nodejs.org/dist/v24.16.0/node-v24.16.0-linux-x64.tar.xz \
 # Installed to a dedicated prefix (not under /home/coder) so it is never
 # shadowed by the Tier 2/3 bind-mounted volumes. Agent CLIs (Tier 2) are
 # intentionally NOT baked here — see managed-tools/manifest.json.
-ENV ONNXRUNTIME_NODE_INSTALL=skip
-RUN npm install -g --prefix /opt/paseo \
+RUN ONNXRUNTIME_NODE_INSTALL=skip npm install -g --prefix /opt/paseo \
       @getpaseo/cli@0.1.105 \
       @getpaseo/server@0.1.105 \
     && npm cache clean --force

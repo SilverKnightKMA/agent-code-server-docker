@@ -37,7 +37,7 @@ sudo chown -R 1000:1000 \
   data/cargo data/rustup data/go \
   data/agent-code-server-cache data/tmux-state \
   data/entrypoint.d \
-  data/paseo
+  data/paseo data/config/claude data/config/codex
 
 # DO NOT chown /var/lib/docker or /var/lib/containerd
 
@@ -71,7 +71,7 @@ sudo chown 1000:1000 \
   data/cargo data/rustup data/go \
   data/agent-code-server-cache data/tmux-state \
   data/entrypoint.d \
-  data/paseo
+  data/paseo data/config/claude data/config/codex
 ```
 
 ### SSH keys

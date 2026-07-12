@@ -235,7 +235,7 @@ jobs:
 
           failures=0
 
-          required_tools="pyright eslint prettier typescript typescript-language-server yaml-language-server bash-language-server omp go gopls shfmt gh yq ripgrep actionlint hadolint rustc cargo"
+          required_tools="pyright eslint prettier typescript typescript-language-server yaml-language-server bash-language-server omp pi opencode claude codex droid go gopls shfmt gh yq ripgrep actionlint hadolint rustc cargo"
 
           for tool in $required_tools; do
             status_line=$(echo "$output" | grep -E "^status.* tool=${tool}( |$)")
@@ -274,6 +274,29 @@ jobs:
           fi
 
           echo "OK: all tools verified state=equal"
+
+      - name: Verify agent CLI binaries actually run
+        run: |
+          # npm list state=equal only proves npm recorded the package as
+          # installed — it does NOT prove the binary works. Native-binary CLIs
+          # (installed with --ignore-scripts) can report state=equal while
+          # still being broken at runtime if their postinstall (which selects/
+          # unpacks the platform-specific binary) was skipped. Run each one.
+          failures=0
+          for cmd in omp pi opencode claude codex droid; do
+            if version_output=$(command -v "${cmd}" >/dev/null 2>&1 && "${cmd}" --version 2>&1); then
+              echo "OK: ${cmd} --version -> ${version_output}"
+            else
+              echo "FAIL: ${cmd} --version failed:"
+              echo "${version_output}"
+              failures=$((failures + 1))
+            fi
+          done
+          if [ "${failures}" -gt 0 ]; then
+            echo "FAIL: ${failures} agent CLI binary check(s) failed"
+            exit 1
+          fi
+          echo "OK: all agent CLI binaries run"
 
       - name: Summary
         if: always()

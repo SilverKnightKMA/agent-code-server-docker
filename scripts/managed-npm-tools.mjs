@@ -136,6 +136,24 @@ async function exposeBins(selected) {
   }
 }
 
+async function runPostinstallScripts(selected) {
+  for (const tool of selected) {
+    if (!tool.needsPostinstall) continue;
+    const pkgDir = path.join(installPath, "node_modules", tool.pkg);
+    const installedPackageJsonPath = path.join(pkgDir, "package.json");
+    if (!(await exists(installedPackageJsonPath))) continue;
+    const installedPackage = JSON.parse(await readFile(installedPackageJsonPath, "utf8"));
+    const postinstall = installedPackage.scripts?.postinstall;
+    if (!postinstall) continue;
+    console.log(`[postinstall] ${tool.name} (${tool.pkg}): ${postinstall}`);
+    await execFileAsync("sh", ["-c", postinstall], {
+      cwd: pkgDir,
+      env: { ...process.env, npm_config_prefix: installPath },
+      maxBuffer: 10 * 1024 * 1024,
+    });
+  }
+}
+
 async function runInstall() {
   const selected = selectedToolList();
   let hasInstallWork = false;
@@ -163,6 +181,10 @@ async function runInstall() {
     env: { ...process.env, NPM_CONFIG_PREFIX: installPath },
     maxBuffer: 10 * 1024 * 1024,
   });
+  // A handful of tools (native-binary agent CLIs) rely on their own postinstall
+  // to select/wire up the platform-specific binary; --ignore-scripts above
+  // skips that for everyone, so run it back explicitly for just those tools.
+  await runPostinstallScripts(selected);
   await exposeBins(selected);
 
   await rm(path.join(installPath, "package.json"), { force: true });

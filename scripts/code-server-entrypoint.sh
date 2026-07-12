@@ -358,9 +358,19 @@ fi
 # ── Paseo relay server (optional self-hosted relay) ──────────────────
 if [ "${ENABLE_PASEO_RELAY:-false}" = "true" ]; then
   echo "[entrypoint] starting paseo-relay on ${RELAY_ADDR:-:8411}..."
-  RELAY_ADDR="${RELAY_ADDR:-:8411}" \
-  LOG_FORMAT="${PASEO_LOG_FORMAT:-json}" \
+  # paseo-relay only accepts text/json; map pretty (and any other Paseo-specific value) -> text
+  _relay_log_format="${PASEO_LOG_FORMAT:-json}"
+  case "${_relay_log_format}" in
+    json) ;;
+    *) _relay_log_format="text" ;;
+  esac
+  gosu "${RUN_USER}" env \
+    HOME="${RUN_HOME}" \
+    USER="${RUN_USER}" \
+    RELAY_ADDR="${RELAY_ADDR:-:8411}" \
+    LOG_FORMAT="${_relay_log_format}" \
     paseo-relay &
+  unset _relay_log_format
 fi
 
 # ── Paseo daemon (baked Tier 1 service, runs alongside code-server) ──

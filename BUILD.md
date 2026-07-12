@@ -74,6 +74,7 @@ npm run managed-tools:compare
     go/            ← Go toolchain (managed)
     pip/           ← Python user packages (custom)
     share/
+      code-server/ ← code-server data (mounted)
       opencode/    ← opencode credentials + data (mounted, XDG_DATA_HOME)
   .go/bin/         ← Go tools (managed)
   .cargo/          ← Rust tools (managed/custom)

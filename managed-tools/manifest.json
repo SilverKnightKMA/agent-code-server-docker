@@ -12,17 +12,17 @@
         {
           "name": "pyright",
           "pkg": "pyright",
-          "version": "1.1.410"
+          "version": "1.1.411"
         },
         {
           "name": "eslint",
           "pkg": "eslint",
-          "version": "10.4.1"
+          "version": "10.6.0"
         },
         {
           "name": "prettier",
           "pkg": "prettier",
-          "version": "3.8.3"
+          "version": "3.9.4"
         },
         {
           "name": "typescript",
@@ -47,12 +47,32 @@
         {
           "name": "omp",
           "pkg": "@oh-my-pi/pi-coding-agent",
-          "version": "15.10.3"
+          "version": "16.3.10"
         },
         {
           "name": "pi",
           "pkg": "@earendil-works/pi-coding-agent",
-          "version": "0.78.1"
+          "version": "0.80.3"
+        },
+        {
+          "name": "opencode",
+          "pkg": "opencode-ai",
+          "version": "1.17.18"
+        },
+        {
+          "name": "claude",
+          "pkg": "@anthropic-ai/claude-code",
+          "version": "2.1.207"
+        },
+        {
+          "name": "codex",
+          "pkg": "@openai/codex",
+          "version": "0.144.1"
+        },
+        {
+          "name": "droid",
+          "pkg": "droid",
+          "version": "0.170.0"
         }
       ]
     },
@@ -68,7 +88,7 @@
       "tools": [
         {
           "name": "go",
-          "version": "1.26.4",
+          "version": "1.27rc1",
           "os": "linux",
           "arch": "amd64",
           "assetPattern": "go{version}.linux-amd64.tar.gz"
@@ -107,7 +127,7 @@
       "tools": [
         {
           "name": "gh",
-          "version": "2.93.0",
+          "version": "2.96.0",
           "repo": "cli/cli",
           "os": "linux",
           "arch": "amd64",
@@ -188,13 +208,13 @@
       "tools": [
         {
           "name": "rustc",
-          "version": "1.96.0",
+          "version": "1.96.1",
           "channel": "stable",
           "profile": "default"
         },
         {
           "name": "cargo",
-          "version": "1.96.0",
+          "version": "1.96.1",
           "channel": "stable",
           "profile": "default"
         }

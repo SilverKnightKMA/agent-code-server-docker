@@ -218,6 +218,9 @@ for appdir in \
   "${RUN_HOME}/.npm-global" \
   "${RUN_HOME}/.npm" \
   "${RUN_HOME}/.bun" \
+  "${RUN_HOME}/.paseo" \
+  "${RUN_HOME}/.claude" \
+  "${RUN_HOME}/.codex" \
   "${RUN_HOME}/.local/bin" \
   "${RUN_HOME}/.local/go" \
   "${RUN_HOME}/.local/pip" \
@@ -340,6 +343,27 @@ fi
 if [ -d "${ENTRYPOINTD:-/home/coder/entrypoint.d}" ]; then
   find "${ENTRYPOINTD:-/home/coder/entrypoint.d}" -maxdepth 1 -type f -executable -print -exec {} \;
 fi
+
+# ── Paseo daemon (baked Tier 1 service, runs alongside code-server) ──
+if [ -z "${PASEO_PASSWORD-}" ]; then
+  echo "[paseo] WARNING: PASEO_PASSWORD is not set." >&2
+  echo "[paseo] The daemon accepts unauthenticated control connections from any client that can reach it." >&2
+  echo "[paseo] Set PASEO_PASSWORD for any published port or network-reachable deployment." >&2
+fi
+
+echo "[entrypoint] starting paseo daemon on ${PASEO_LISTEN:-0.0.0.0:6767}..."
+gosu "${RUN_USER}" env \
+  HOME="${RUN_HOME}" \
+  USER="${RUN_USER}" \
+  PATH="${PATH}" \
+  PASEO_HOME="${PASEO_HOME:-${RUN_HOME}/.paseo}" \
+  PASEO_LISTEN="${PASEO_LISTEN:-0.0.0.0:6767}" \
+  PASEO_WEB_UI_ENABLED="${PASEO_WEB_UI_ENABLED:-true}" \
+  PASEO_PASSWORD="${PASEO_PASSWORD-}" \
+  PASEO_HOSTNAMES="${PASEO_HOSTNAMES-}" \
+  CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-${RUN_HOME}/.claude}" \
+  CODEX_HOME="${CODEX_HOME:-${RUN_HOME}/.codex}" \
+  paseo start --foreground --listen "${PASEO_LISTEN:-0.0.0.0:6767}" --web-ui &
 
 # ── Launch code-server (with explicit env) ─────────────────────────
 echo "[entrypoint] launching code-server as ${RUN_USER}..."

@@ -69,6 +69,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     iproute2 \
     iptables \
     jq \
+    lbzip2 \
     less \
     locales \
     lsb-release \
@@ -111,6 +112,16 @@ COPY --from=bun-runtime /usr/local/bin/bun /usr/local/bin/bun
 # Pin to same version as Bun's Node for compatibility
 RUN curl -fsSL https://nodejs.org/dist/v24.16.0/node-v24.16.0-linux-x64.tar.xz \
     | tar -C /usr/local --strip-components=1 -xJf -
+
+# ── Paseo daemon + web UI (baked core, Tier 1) ──────────────────────
+# Installed to a dedicated prefix (not under /home/coder) so it is never
+# shadowed by the Tier 2/3 bind-mounted volumes. Agent CLIs (Tier 2) are
+# intentionally NOT baked here — see managed-tools/manifest.json.
+ENV ONNXRUNTIME_NODE_INSTALL=skip
+RUN npm install -g --prefix /opt/paseo \
+      @getpaseo/cli@0.1.105 \
+      @getpaseo/server@0.1.105 \
+    && npm cache clean --force
 
 # ── User setup ──────────────────────────────────────────────────────
 RUN adduser --gecos '' --disabled-password --uid 1000 coder \
@@ -163,8 +174,15 @@ ENV AGENT_CODE_SERVER_CONFIG_CACHE_DIR=/home/coder/.local/state/agent-code-serve
 ENV AGENT_CODE_SERVER_TMPDIR=/home/coder/.local/state/agent-code-server/tmp
 ENV TMUX_TMPDIR=/home/coder/.local/state/tmux/socket
 ENV ENTRYPOINTD=/home/coder/entrypoint.d
+ENV PASEO_HOME=/home/coder/.paseo
+ENV PASEO_LISTEN=0.0.0.0:6767
+ENV PASEO_WEB_UI_ENABLED=true
+ENV PASEO_LOG_FORMAT=json
+ENV PASEO_LOG_LEVEL=info
+ENV CLAUDE_CONFIG_DIR=/home/coder/.claude
+ENV CODEX_HOME=/home/coder/.codex
 
-ENV PATH=/home/coder/.local/bin:/home/coder/.npm-global/bin:/home/coder/.local/go/bin:/home/coder/.go/bin:/home/coder/.cargo/bin:/home/coder/.local/pip/bin:/home/coder/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ENV PATH=/home/coder/.local/bin:/home/coder/.npm-global/bin:/home/coder/.local/go/bin:/home/coder/.go/bin:/home/coder/.cargo/bin:/home/coder/.local/pip/bin:/home/coder/.bun/bin:/opt/paseo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 RUN mkdir -p \
     /home/coder/.bun \
@@ -183,6 +201,9 @@ RUN mkdir -p \
     /home/coder/.local/state \
     /home/coder/.npm-global \
     /home/coder/.ssh \
+    /home/coder/.paseo \
+    /home/coder/.claude \
+    /home/coder/.codex \
     /home/coder/workspaces \
     /home/coder/entrypoint.d \
   && chown -R coder:coder /home/coder
@@ -206,7 +227,7 @@ RUN mkdir -p /etc/profile.d \
     'XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"' \
     'TMUX_TMPDIR="${TMUX_TMPDIR:-$XDG_STATE_HOME/tmux/socket}"' \
     '' \
-    'PATH="$HOME/.bun/bin:$HOME/.npm-global/bin:$HOME/.local/bin:$HOME/.local/go/bin:$HOME/.go/bin:$HOME/.cargo/bin:$HOME/.local/pip/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"' \
+    'PATH="$HOME/.bun/bin:$HOME/.npm-global/bin:$HOME/.local/bin:$HOME/.local/go/bin:$HOME/.go/bin:$HOME/.cargo/bin:$HOME/.local/pip/bin:/opt/paseo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"' \
     'export BUN_INSTALL NPM_CONFIG_PREFIX NPM_CONFIG_CACHE GOPATH GOBIN CARGO_HOME PYTHONUSERBASE XDG_STATE_HOME TMUX_TMPDIR PATH' \
     'mkdir -p "$TMUX_TMPDIR" 2>/dev/null || true' \
     '' \
@@ -237,6 +258,7 @@ RUN mkdir -p /etc/profile.d \
 # https://github.com/coder/code-server/issues/5177
 
 EXPOSE 8080
+EXPOSE 6767
 
 USER root
 WORKDIR /home/coder

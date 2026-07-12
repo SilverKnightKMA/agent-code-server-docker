@@ -54,9 +54,15 @@ services:
       - ./data/agent-code-server-cache:/home/coder/.local/state/agent-code-server
 
       # Paseo daemon state + agent credentials
+      # Each agent CLI keeps its own config/credentials dir; check upstream
+      # source before assuming a new agent follows one of these conventions.
       - ./data/paseo:/home/coder/.paseo
       - ./data/config/claude:/home/coder/.claude
       - ./data/config/codex:/home/coder/.codex
+      - ./data/pi:/home/coder/.pi
+      - ./data/omp:/home/coder/.omp
+      - ./data/factory:/home/coder/.factory
+      - ./data/opencode:/home/coder/.local/share/opencode
 
       # Optional tmux persistence (uncomment when AGENT_CODE_SERVER_TMUX_PERSIST=true)
       # - ./data/tmux-state:/home/coder/.local/state/tmux

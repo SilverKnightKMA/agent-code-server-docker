@@ -24,7 +24,7 @@ mkdir -p \
   data/cargo data/rustup data/go \
   data/agent-code-server-cache data/tmux-state \
   data/entrypoint.d \
-  data/paseo data/config/claude data/config/codex
+  data/paseo data/config/claude data/config/codex data/pi data/omp data/factory data/opencode
 
 # 2. Set ownership (UID 1000 = coder inside container)
 # Skip if data/ does not exist yet; run after first creation.
@@ -37,7 +37,7 @@ sudo chown -R 1000:1000 \
   data/cargo data/rustup data/go \
   data/agent-code-server-cache data/tmux-state \
   data/entrypoint.d \
-  data/paseo data/config/claude data/config/codex
+  data/paseo data/config/claude data/config/codex data/pi data/omp data/factory data/opencode
 
 # DO NOT chown /var/lib/docker or /var/lib/containerd
 
@@ -71,7 +71,7 @@ sudo chown 1000:1000 \
   data/cargo data/rustup data/go \
   data/agent-code-server-cache data/tmux-state \
   data/entrypoint.d \
-  data/paseo data/config/claude data/config/codex
+  data/paseo data/config/claude data/config/codex data/pi data/omp data/factory data/opencode
 ```
 
 ### SSH keys
@@ -169,8 +169,16 @@ agent CLIs (`omp`, `pi`, `opencode`, `claude`, `codex`, `droid`, `copilot`) alre
   connections.
 - Set `PASEO_HOSTNAMES` if you reach it through a reverse-proxied DNS name.
 - Daemon state and agent credentials persist under `data/paseo`,
-  `data/config/claude`, `data/config/codex` (mounted to `~/.paseo`,
-  `~/.claude`, `~/.codex`).
+  `data/config/claude`, `data/config/codex`, `data/pi`, `data/omp`,
+  `data/factory`, `data/opencode` (mounted to `~/.paseo`, `~/.claude`,
+  `~/.codex`, `~/.pi`, `~/.omp`, `~/.factory`, `~/.local/share/opencode`
+  respectively). Each agent CLI has its own convention — `codex`/`claude`
+  use dedicated dotdirs, `omp`/`pi` use `~/.omp`/`~/.pi`, `droid` uses
+  `~/.factory`, and `opencode` follows the XDG base dir spec (credentials
+  live under `$XDG_DATA_HOME/opencode`, i.e. `~/.local/share/opencode` given
+  this image's XDG env defaults) rather than a single dotdir. Check
+  upstream source before assuming a new agent follows one of these same
+  conventions.
 
 ## Ports
 

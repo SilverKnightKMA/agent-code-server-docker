@@ -73,6 +73,8 @@ npm run managed-tools:compare
     bin/           ← release binaries (managed)
     go/            ← Go toolchain (managed)
     pip/           ← Python user packages (custom)
+    share/
+      opencode/    ← opencode credentials + data (mounted, XDG_DATA_HOME)
   .go/bin/         ← Go tools (managed)
   .cargo/          ← Rust tools (managed/custom)
   .bun/            ← Bun runtime (managed)
@@ -82,6 +84,9 @@ npm run managed-tools:compare
   .paseo/          ← Paseo daemon state (mounted, PASEO_HOME)
   .claude/         ← Claude Code credentials (mounted)
   .codex/          ← Codex credentials (mounted)
+  .omp/            ← omp (oh-my-pi) credentials (mounted)
+  .pi/             ← pi credentials (mounted)
+  .factory/        ← droid (factory.ai) credentials/sessions (mounted)
   workspaces/      ← Code (mounted)
   entrypoint.d/    ← Startup hooks (mounted, optional)
 

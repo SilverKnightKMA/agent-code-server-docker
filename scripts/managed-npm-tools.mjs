@@ -10,6 +10,14 @@ import { actionForState, diagnosticForState, printCompareRow, printStatusRow } f
 
 const execFileAsync = promisify(execFile);
 
+// The npm family manifest is fetched from an online source by default (see
+// managed-tools-config.mjs). A manifest field alone (tool.needsPostinstall)
+// must not be sufficient to make this script execute a package's postinstall
+// script — that would let a compromised/misconfigured online manifest turn
+// on arbitrary code execution for any package. Postinstall only ever runs
+// for packages also present in this hardcoded, reviewed allowlist.
+const POSTINSTALL_ALLOWLIST = new Set(["@anthropic-ai/claude-code", "opencode-ai", "droid"]);
+
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const rootPackageJsonPath = path.join(repoRoot, "package.json");
 
@@ -136,6 +144,28 @@ async function exposeBins(selected) {
   }
 }
 
+async function runPostinstallScripts(selected) {
+  for (const tool of selected) {
+    if (tool.needsPostinstall !== true) continue;
+    if (!POSTINSTALL_ALLOWLIST.has(tool.pkg)) {
+      console.warn(`[warn] ${tool.name} (${tool.pkg}) has needsPostinstall set but is not in POSTINSTALL_ALLOWLIST; skipping`);
+      continue;
+    }
+    const pkgDir = path.join(installPath, "node_modules", tool.pkg);
+    const installedPackageJsonPath = path.join(pkgDir, "package.json");
+    if (!(await exists(installedPackageJsonPath))) continue;
+    const installedPackage = JSON.parse(await readFile(installedPackageJsonPath, "utf8"));
+    const postinstall = installedPackage.scripts?.postinstall;
+    if (!postinstall) continue;
+    console.log(`[postinstall] ${tool.name} (${tool.pkg}): ${postinstall}`);
+    await execFileAsync("sh", ["-c", postinstall], {
+      cwd: pkgDir,
+      env: { ...process.env, npm_config_prefix: installPath, NPM_CONFIG_PREFIX: installPath },
+      maxBuffer: 10 * 1024 * 1024,
+    });
+  }
+}
+
 async function runInstall() {
   const selected = selectedToolList();
   let hasInstallWork = false;
@@ -163,6 +193,10 @@ async function runInstall() {
     env: { ...process.env, NPM_CONFIG_PREFIX: installPath },
     maxBuffer: 10 * 1024 * 1024,
   });
+  // A handful of tools (native-binary agent CLIs) rely on their own postinstall
+  // to select/wire up the platform-specific binary; --ignore-scripts above
+  // skips that for everyone, so run it back explicitly for just those tools.
+  await runPostinstallScripts(selected);
   await exposeBins(selected);
 
   await rm(path.join(installPath, "package.json"), { force: true });

@@ -57,12 +57,14 @@
         {
           "name": "opencode",
           "pkg": "opencode-ai",
-          "version": "1.17.18"
+          "version": "1.17.18",
+          "needsPostinstall": true
         },
         {
           "name": "claude",
           "pkg": "@anthropic-ai/claude-code",
-          "version": "2.1.207"
+          "version": "2.1.207",
+          "needsPostinstall": true
         },
         {
           "name": "codex",
@@ -72,7 +74,13 @@
         {
           "name": "droid",
           "pkg": "droid",
-          "version": "0.170.0"
+          "version": "0.170.0",
+          "needsPostinstall": true
+        },
+        {
+          "name": "copilot",
+          "pkg": "@github/copilot",
+          "version": "1.0.70"
         }
       ]
     },

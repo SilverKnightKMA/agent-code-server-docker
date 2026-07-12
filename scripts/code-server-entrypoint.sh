@@ -221,6 +221,10 @@ for appdir in \
   "${RUN_HOME}/.paseo" \
   "${RUN_HOME}/.claude" \
   "${RUN_HOME}/.codex" \
+  "${RUN_HOME}/.pi" \
+  "${RUN_HOME}/.omp" \
+  "${RUN_HOME}/.factory" \
+  "${RUN_HOME}/.local/share/opencode" \
   "${RUN_HOME}/.local/bin" \
   "${RUN_HOME}/.local/go" \
   "${RUN_HOME}/.local/pip" \

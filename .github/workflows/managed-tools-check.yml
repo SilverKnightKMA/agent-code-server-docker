@@ -248,7 +248,7 @@ jobs:
 
           failures=0
 
-          required_tools="pyright eslint prettier typescript typescript-language-server yaml-language-server bash-language-server omp pi opencode claude codex droid go gopls shfmt gh yq ripgrep actionlint hadolint rustc cargo"
+          required_tools="pyright eslint prettier typescript typescript-language-server yaml-language-server bash-language-server omp pi opencode claude codex droid copilot go gopls shfmt gh yq ripgrep actionlint hadolint rustc cargo"
 
           for tool in $required_tools; do
             status_line=$(echo "$output" | grep -E "^status.* tool=${tool}( |$)")
@@ -296,7 +296,7 @@ jobs:
           # still being broken at runtime if their postinstall (which selects/
           # unpacks the platform-specific binary) was skipped. Run each one.
           failures=0
-          for cmd in omp pi opencode claude codex droid; do
+          for cmd in omp pi opencode claude codex droid copilot; do
             if ! command -v "${cmd}" >/dev/null 2>&1; then
               echo "FAIL: ${cmd} not found on PATH"
               failures=$((failures + 1))

@@ -76,6 +76,11 @@
           "pkg": "droid",
           "version": "0.170.0",
           "needsPostinstall": true
+        },
+        {
+          "name": "copilot",
+          "pkg": "@github/copilot",
+          "version": "1.0.70"
         }
       ]
     },

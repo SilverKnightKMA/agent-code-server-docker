@@ -152,7 +152,7 @@ drwxr-xr-x 1000 1000 ... /home/coder/.cache
 | Tier | Examples | Persist |
 |------|----------|---------|
 | **1. Baked-in** | code-server, Paseo, Node.js, Bun, Python, Git, tmux, Docker CLI | In image |
-| **2. Managed mounted** | omp, pi, opencode, claude, codex, droid, TypeScript LSP, Go, Rust, gh, yq, ripgrep | Volume data/ |
+| **2. Managed mounted** | omp, pi, opencode, claude, codex, droid, copilot, TypeScript LSP, Go, Rust, gh, yq, ripgrep | Volume data/ |
 | **3. Custom mounted** | npm install -g, go install, cargo install | Volume data/ |
 
 ## Paseo
@@ -160,7 +160,7 @@ drwxr-xr-x 1000 1000 ... /home/coder/.cache
 [Paseo](https://github.com/getpaseo/paseo) is baked into the image (Tier 1,
 alongside code-server) and starts automatically with the container. It shares
 the same `coder` user/home as code-server, so it can launch any of the Tier 2
-agent CLIs (`omp`, `pi`, `opencode`, `claude`, `codex`, `droid`) already on
+agent CLIs (`omp`, `pi`, `opencode`, `claude`, `codex`, `droid`, `copilot`) already on
 `PATH` against the same `/home/coder/workspaces` that code-server edits.
 
 - Web UI: `http://localhost:6767`

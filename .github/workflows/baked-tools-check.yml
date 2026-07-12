@@ -106,7 +106,7 @@ jobs:
       - name: Verify agent CLIs are not baked into image
         run: |
           failures=0
-          for cmd in omp pi opencode claude codex droid; do
+          for cmd in omp pi opencode claude codex droid copilot; do
             if docker run --rm --entrypoint /bin/bash agent-code-server:test -c "command -v ${cmd} >/dev/null 2>&1"; then
               echo "FAIL: ${cmd} is still baked into the image (must stay Tier 2 managed-mounted)"
               failures=$((failures + 1))

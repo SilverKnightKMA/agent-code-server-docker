@@ -7,7 +7,7 @@ Builder-owned Docker packaging for **code-server** (VS Code in browser) plus AI 
 | Tier | Description | Examples | Setup |
 |------|-------------|----------|-------|
 | **Baked-in** | Bundled in image, always available | code-server, Paseo, Node.js, Bun, Python, Git, tmux, system tools | Image build time |
-| **Managed mounted** | Version-pinned, installed on demand into persisted volumes | omp, pi, opencode, claude, codex, droid, TypeScript LSP, ESLint, Go, Rust, gh, yq, ripgrep | `AGENT_CODE_SERVER_AUTOINSTALL=true` or run `npm run managed-tools:init` |
+| **Managed mounted** | Version-pinned, installed on demand into persisted volumes | omp, pi, opencode, claude, codex, droid, copilot, TypeScript LSP, ESLint, Go, Rust, gh, yq, ripgrep | `AGENT_CODE_SERVER_AUTOINSTALL=true` or run `npm run managed-tools:init` |
 | **Custom mounted** | User-installed via package managers | `npm install -g`, `go install`, `cargo install`, `pip install --user` | Direct commands |
 
 ## Quick start with Docker
@@ -57,7 +57,7 @@ npm run managed-tools:compare
 
 | Family | Tools | Versions |
 |--------|-------|----------|
-| npm | pyright, eslint, prettier, typescript, typescript-language-server, yaml-language-server, bash-language-server, omp, pi, opencode, claude, codex, droid | Pinned in `managed-tools/manifest.json` |
+| npm | pyright, eslint, prettier, typescript, typescript-language-server, yaml-language-server, bash-language-server, omp, pi, opencode, claude, codex, droid, copilot | Pinned in `managed-tools/manifest.json` |
 | go_toolchain | go | Latest stable |
 | go_tools | gopls, shfmt | Pinned |
 | gh | GitHub CLI | Pinned |

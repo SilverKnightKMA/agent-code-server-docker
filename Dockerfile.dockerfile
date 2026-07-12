@@ -49,6 +49,15 @@ RUN curl -fsSL "https://github.com/coder/code-server/releases/download/v${CODE_S
 # ── Stage: Docker-in-Docker ────────────────────────────────────────
 FROM docker:29.6.1-dind@sha256:66d292e5c26bd33a6f6f61cacb880de2186339a524ecba1ce098dbbaceed6515 AS docker-dind
 
+# ── Stage: Paseo relay binary ───────────────────────────────────────
+FROM alpine:3.21 AS paseo-relay-builder
+ARG PASEO_RELAY_VERSION=0.5.0
+ARG TARGETARCH=amd64
+RUN mkdir /relay \
+  && wget -qO- \
+       "https://github.com/zenghongtu/paseo-relay/releases/download/v${PASEO_RELAY_VERSION}/paseo-relay-v${PASEO_RELAY_VERSION}-linux-${TARGETARCH}.tar.gz" \
+     | tar xzf - -C /relay
+
 # ── Stage: runtime ──────────────────────────────────────────────────
 FROM debian:13-slim@sha256:4e401d95de7083948053197a9c3913343cd06b706bf15eb6a0c3ccd26f436a0e AS runtime
 
@@ -148,6 +157,9 @@ COPY --from=toolchain /opt/agent-code-server/managed-tools/vendor/tmux-continuum
 COPY --from=docker-dind /usr/local/bin/ /usr/local/bin/
 COPY --from=docker-dind /usr/local/libexec/docker/cli-plugins/ /usr/local/libexec/docker/cli-plugins/
 
+# ── Paseo relay server binary ──────────────────────────────────────
+COPY --from=paseo-relay-builder /relay/paseo-relay /usr/local/bin/paseo-relay
+
 # ── Runtime directories & config ────────────────────────────────────
 ENV HOME=/home/coder
 ENV NODE_ENV=production
@@ -178,6 +190,8 @@ ENV PASEO_LISTEN=0.0.0.0:6767
 ENV PASEO_WEB_UI_ENABLED=true
 ENV PASEO_LOG_FORMAT=json
 ENV PASEO_LOG_LEVEL=info
+ENV ENABLE_PASEO_RELAY=false
+ENV RELAY_ADDR=:8411
 ENV CLAUDE_CONFIG_DIR=/home/coder/.claude
 ENV CODEX_HOME=/home/coder/.codex
 
@@ -258,6 +272,7 @@ RUN mkdir -p /etc/profile.d \
 
 EXPOSE 8080
 EXPOSE 6767
+EXPOSE 8411
 
 USER root
 WORKDIR /home/coder

@@ -174,6 +174,11 @@ jobs:
             'curl -fsSL "https://registry.npmjs.org/@getpaseo/cli/latest" 2>/dev/null | jq -r ".version" 2>/dev/null' \
             'cat'
 
+          # paseo-relay — baked-tools-monitor, pinned via ARG PASEO_RELAY_VERSION in Dockerfile
+          upstream_check "paseo-relay" "0.5.0" \
+            'curl -fsSL https://api.github.com/repos/zenghongtu/paseo-relay/releases/latest 2>/dev/null | jq -r ".tag_name | sub(\"^v\"; \"\")" 2>/dev/null' \
+            'cat'
+
           echo "---"
           echo "results_file=${results_file}" >> "${GITHUB_OUTPUT}"
           echo "failures=${failures}" >> "${GITHUB_OUTPUT}"

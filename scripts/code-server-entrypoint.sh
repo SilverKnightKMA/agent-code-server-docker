@@ -282,6 +282,13 @@ gosu "${RUN_USER}" sh -c '
   check_dir "code-server-config" "/home/coder/.config/code-server"
   check_dir "code-server-data"  "/home/coder/.local/share/code-server"
   check_dir "code-server-cache" "/home/coder/.cache/code-server"
+  check_dir "paseo-home" "/home/coder/.paseo"
+  check_dir "claude-config" "/home/coder/.claude"
+  check_dir "codex-home" "/home/coder/.codex"
+  check_dir "pi-config" "/home/coder/.pi"
+  check_dir "omp-config" "/home/coder/.omp"
+  check_dir "factory-config" "/home/coder/.factory"
+  check_dir "opencode-data" "/home/coder/.local/share/opencode"
 
   if [ "${CHECK_FAILED}" = "true" ]; then
     echo "[DIAGNOSTICS] Preflight failed. Environment:" >&2
@@ -300,7 +307,7 @@ gosu "${RUN_USER}" sh -c '
     echo "--- namei .cache/code-server ---" >&2
     namei -l /home/coder/.cache/code-server 2>/dev/null >&2 || echo "(namei unavailable)" >&2
     echo "--- ls -ldn ---" >&2
-    for p in /home/coder /home/coder/.config /home/coder/.config/code-server /home/coder/.local /home/coder/.local/share /home/coder/.local/share/code-server /home/coder/.cache /home/coder/.cache/code-server; do
+    for p in /home/coder /home/coder/.config /home/coder/.config/code-server /home/coder/.local /home/coder/.local/share /home/coder/.local/share/code-server /home/coder/.cache /home/coder/.cache/code-server /home/coder/.paseo /home/coder/.claude /home/coder/.codex /home/coder/.pi /home/coder/.omp /home/coder/.factory /home/coder/.local/share/opencode; do
       ls -ldn "${p}" 2>/dev/null || echo "  ${p}: (does not exist)" >&2
     done
     echo "--- mount | grep /home/coder ---" >&2

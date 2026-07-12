@@ -6,6 +6,7 @@ services:
     mem_limit: 8g
     ports:
       - "8880:8080"
+      - "6767:6767"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -17,6 +18,12 @@ services:
       # AGENT_CODE_SERVER_AUTOINSTALL: "true"  # install managed tools (including omp) on startup
       # UI_PASSWORD: change-me
       # SUDO_PASSWORD: change-me
+
+      # Paseo (agent orchestration daemon + web UI, baked in alongside code-server)
+      # PASEO_PASSWORD: change-me
+      # PASEO_HOSTNAMES: paseo.example.com
+      # ANTHROPIC_API_KEY: change-me
+      # OPENAI_API_KEY: change-me
 
       # Docker-in-Docker. Uncomment these blocks to enable:
       # ENABLE_DIND: "true"
@@ -49,6 +56,11 @@ services:
 
       # === Managed runtime state ===
       - ./data/agent-code-server-cache:/home/coder/.local/state/agent-code-server
+
+      # === Paseo daemon state + agent credentials ===
+      - ./data/paseo:/home/coder/.paseo
+      - ./data/config/claude:/home/coder/.claude
+      - ./data/config/codex:/home/coder/.codex
 
       # === Optional tmux persistence (uncomment when AGENT_CODE_SERVER_TMUX_PERSIST=true) ===
       # - ./data/tmux-state:/home/coder/.local/state/tmux

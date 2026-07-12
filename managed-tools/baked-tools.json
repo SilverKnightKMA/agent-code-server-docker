@@ -201,6 +201,21 @@
       "monitorType": "intentionally-unpinned",
       "intentionalRationale": "tmux comes from Debian stable apt repository. It is user-facing but low-churn, and Debian security/stability updates are preferred over manual pin maintenance.",
       "updateImpact": "rebuild-image-required"
+    },
+    {
+      "name": "paseo",
+      "currentVersion": "0.1.105",
+      "versionCommand": "paseo --version",
+      "versionPattern": "^[0-9]+\\.[0-9]+\\.[0-9]+",
+      "installedPath": "/opt/paseo/bin/paseo",
+      "sourceType": "npm",
+      "sourceUrl": "https://github.com/getpaseo/paseo",
+      "sourceDetail": "RUN npm install -g --prefix /opt/paseo @getpaseo/cli@0.1.105 @getpaseo/server@0.1.105 in Dockerfile.dockerfile — not a Docker FROM reference, so Dependabot docker cannot bump it",
+      "monitorType": "baked-tools-monitor",
+      "updateImpact": "rebuild-image-required",
+      "triggerPaths": [
+        "Dockerfile.dockerfile"
+      ]
     }
   ]
 }

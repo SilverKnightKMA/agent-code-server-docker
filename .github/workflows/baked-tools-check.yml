@@ -69,7 +69,7 @@ jobs:
       - name: Verify baked commands exist
         run: |
           failures=0
-          for cmd in code-server node npm bun docker dockerd fixuid gosu dumb-init git curl jq python3 pip tmux; do
+          for cmd in code-server node npm bun docker dockerd fixuid gosu dumb-init git curl jq python3 pip tmux paseo; do
             result=$(docker run --rm --entrypoint /bin/bash agent-code-server:test -c "command -v ${cmd}" 2>&1) || true
             if [ -n "${result}" ]; then
               echo "OK: ${cmd} found at ${result}"
@@ -88,7 +88,7 @@ jobs:
       - name: Verify baked tool versions
         run: |
           failures=0
-          for cmd in code-server node npm bun docker dockerd git python3 tmux; do
+          for cmd in code-server node npm bun docker dockerd git python3 tmux paseo; do
             echo "=== ${cmd} --version ==="
             version=$(docker run --rm --entrypoint /bin/bash agent-code-server:test -c "if [ \"${cmd}\" = tmux ]; then tmux -V; else ${cmd} --version; fi 2>&1" || echo "VERSION CHECK FAILED")
             echo "${version}"
@@ -103,13 +103,21 @@ jobs:
           fi
           echo "OK: all version checks passed"
 
-      - name: Verify omp is not baked into image
+      - name: Verify agent CLIs are not baked into image
         run: |
-          if docker run --rm --entrypoint /bin/bash agent-code-server:test -c 'command -v omp >/dev/null 2>&1'; then
-            echo "FAIL: omp is still baked into the image"
+          failures=0
+          for cmd in omp pi opencode claude codex droid; do
+            if docker run --rm --entrypoint /bin/bash agent-code-server:test -c "command -v ${cmd} >/dev/null 2>&1"; then
+              echo "FAIL: ${cmd} is still baked into the image (must stay Tier 2 managed-mounted)"
+              failures=$((failures + 1))
+            else
+              echo "OK: ${cmd} is not baked into the image"
+            fi
+          done
+          if [ "${failures}" -gt 0 ]; then
+            echo "FAIL: ${failures} agent CLI(s) incorrectly baked into the image"
             exit 1
           fi
-          echo "OK: omp is not baked into the image"
 
       - name: Verify PATH in fresh shell
         run: |

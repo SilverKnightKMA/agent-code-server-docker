@@ -9,6 +9,7 @@ const policy = JSON.parse(await readFile(policyPath, "utf8"));
 
 const requiredFamilies = [
   "npm",
+  "paseo_skills",
   "go_toolchain",
   "go_tools",
   "gh",
@@ -56,6 +57,11 @@ for (const familyName of ["gh", "release_binaries"]) {
     if (!checksumPolicy) throw new Error(`${familyName}/${tool.name} missing checksumPolicy`);
     if (!checksumFormat) throw new Error(`${familyName}/${tool.name} missing checksumFormat`);
   }
+}
+
+for (const tool of manifest.families.paseo_skills.tools) {
+  if (!tool.source) throw new Error(`paseo_skills/${tool.name} missing source`);
+  if (!tool.repo) throw new Error(`paseo_skills/${tool.name} missing repo`);
 }
 
 console.log("managed-tools manifest valid");

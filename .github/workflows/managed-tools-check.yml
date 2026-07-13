@@ -16,6 +16,7 @@ on:
       - scripts/managed-npm-tools.mjs
       - scripts/managed-go-tools.mjs
       - scripts/managed-mounted-tools.mjs
+      - scripts/managed-paseo-skills.mjs
       - scripts/managed-tools-config.mjs
       - scripts/managed-tools-output.mjs
       - scripts/managed-tools-status.mjs
@@ -35,6 +36,7 @@ on:
       - scripts/managed-npm-tools.mjs
       - scripts/managed-go-tools.mjs
       - scripts/managed-mounted-tools.mjs
+      - scripts/managed-paseo-skills.mjs
       - scripts/managed-tools-config.mjs
       - scripts/managed-tools-output.mjs
       - scripts/managed-tools-status.mjs
@@ -97,6 +99,12 @@ jobs:
             "${TEST_HOME}/.local/go" \
             "${TEST_HOME}/.go/bin" \
             "${TEST_HOME}/.cargo/bin" \
+            "${TEST_HOME}/.omp/agent" \
+            "${TEST_HOME}/.pi/agent" \
+            "${TEST_HOME}/.codex" \
+            "${TEST_HOME}/.config/opencode" \
+            "${TEST_HOME}/.factory" \
+            "${TEST_HOME}/.copilot" \
             "${TEST_HOME}/.rustup" \
             "${TEST_HOME}/.npm" \
             "${TEST_HOME}/.cache"
@@ -116,6 +124,8 @@ jobs:
             echo "RUSTUP_HOME=${TEST_HOME}/.rustup"
             echo "MANAGED_RUSTUP_HOME=${TEST_HOME}/.rustup"
             echo "PATH=${TEST_HOME}/.npm-global/bin:${TEST_HOME}/.local/go/bin:${TEST_HOME}/.go/bin:${TEST_HOME}/.cargo/bin:${TEST_HOME}/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            echo "PI_CODING_AGENT_DIR=${TEST_HOME}/.omp/agent"
+            echo "CLAUDE_CONFIG_DIR=${TEST_HOME}/.claude"
           } >> "$GITHUB_ENV"
 
           # Test THIS branch/PR's manifest.json + policy.json, not main's
@@ -248,7 +258,40 @@ jobs:
 
           failures=0
 
-          required_tools="pyright eslint prettier typescript typescript-language-server yaml-language-server bash-language-server omp pi opencode claude codex droid copilot go gopls shfmt gh yq ripgrep actionlint hadolint rustc cargo"
+          required_tools="pyright eslint prettier typescript typescript-language-server yaml-language-server bash-language-server omp pi opencode claude codex droid copilot paseo-skills go gopls shfmt gh yq ripgrep actionlint hadolint rustc cargo"
+          
+          paseo_status=$(echo "$output" | grep -E '^status.* tool=paseo-skills( |$)')
+          if [ -z "$paseo_status" ]; then
+            echo "FAIL: no status line for paseo-skills"
+            failures=$((failures + 1))
+          elif ! echo "$paseo_status" | grep -q 'state=equal'; then
+            echo "FAIL: paseo-skills state is not equal"
+            echo "  ${paseo_status}"
+            failures=$((failures + 1))
+          fi
+          
+          paseo_skill_names="paseo paseo-advisor paseo-committee paseo-handoff paseo-loop release-beta release-stable"
+          for dir in \
+            "${HOME}/.omp/agent/skills" \
+            "${HOME}/.pi/agent/skills" \
+            "${HOME}/.claude/skills" \
+            "${HOME}/.codex/skills" \
+            "${HOME}/.config/opencode/skills" \
+            "${HOME}/.factory/skills" \
+            "${HOME}/.copilot/skills"
+          do
+            if [ ! -d "$dir" ]; then
+              echo "FAIL: missing Paseo skill dir $dir"
+              failures=$((failures + 1))
+              continue
+            fi
+            for skill in $paseo_skill_names; do
+              if [ ! -f "$dir/$skill/SKILL.md" ]; then
+                echo "FAIL: missing $skill/SKILL.md in $dir"
+                failures=$((failures + 1))
+              fi
+            done
+          done
 
           for tool in $required_tools; do
             status_line=$(echo "$output" | grep -E "^status.* tool=${tool}( |$)")

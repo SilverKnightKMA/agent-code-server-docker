@@ -84,8 +84,31 @@
         }
       ]
     },
+    "paseo_skills": {
+      "comment": "Paseo skill pack materialized into managed agent skill roots under the mounted home volume",
+      "installMethod": "bootstrap.sh --paseo-skills",
+      "installPath": "~/.agents/skills",
+      "statePath": "~/.local/state/paseo-skills",
+      "sourceType": "managed-tools-config",
+      "tools": [
+        {
+          "name": "paseo-skills",
+          "version": "v0.1.105",
+          "source": "https://github.com/getpaseo/paseo.git",
+          "repo": "getpaseo/paseo",
+          "agentDirs": [
+            "~/.omp/agent/skills",
+            "~/.pi/agent/skills",
+            "~/.claude/skills",
+            "~/.codex/skills",
+            "~/.config/opencode/skills",
+            "~/.factory/skills",
+            "~/.copilot/skills"
+          ]
+        }
+      ]
+    },
     "go_toolchain": {
-      "comment": "Go toolchain release tarball installed into mounted path",
       "installMethod": "release-tarball",
       "installPath": "~/.local/go",
       "statePath": "~/.local/state/go",

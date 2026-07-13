@@ -61,10 +61,10 @@ validation before enabling native auto-merge. The steps are:
    - **Managed-tools paths**: `package.json`, `package-lock.json`, `go.mod`,
      `go.sum`, `tools.go`, `scripts/managed-npm-tools.mjs`,
      `scripts/managed-go-tools.mjs`, `scripts/managed-mounted-tools.mjs`,
-     `scripts/managed-tools-config.mjs`, `scripts/managed-tools-output.mjs`,
-     `scripts/managed-tools-status.mjs`, `scripts/validate-managed-tools.mjs`,
-     `managed-tools/manifest.json`, `managed-tools/policy.json`,
-     `.github/workflows/managed-tools-check.yml`
+     `scripts/managed-paseo-skills.mjs`, `scripts/managed-tools-config.mjs`,
+     `scripts/managed-tools-output.mjs`, `scripts/managed-tools-status.mjs`,
+     `scripts/validate-managed-tools.mjs`, `managed-tools/manifest.json`,
+     `managed-tools/policy.json`, `.github/workflows/managed-tools-check.yml`
 
 2. **Query check runs**: fetch all check runs for the PR head commit via
    `repos/{owner}/{repo}/commits/{sha}/check-runs`. Match by check name.

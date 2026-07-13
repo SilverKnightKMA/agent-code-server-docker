@@ -22,7 +22,9 @@ A container restart alone will still have the old version.
 
 User-mounted tools are installed by the managed-tools framework into persistent
 volumes mounted at `/home/coder`. Examples: pyright, eslint, gh, actionlint,
-hadolint, Go toolchain.
+hadolint, Go toolchain, and the mounted Paseo skills pack materialized into
+managed agent skill roots such as `~/.omp/agent/skills`, `~/.pi/agent/skills`,
+`~/.claude/skills`, `~/.codex/skills`, and `~/.config/opencode/skills`.
 
 User-mounted tools update on container restart via the managed-tools init
 script. They do **not** require an image rebuild. Only the managed-tools config
@@ -116,7 +118,7 @@ that touches any of:
 
 Changes to `managed-tools/manifest.json`, `scripts/managed-*-tools.mjs`, or
 other managed-tools configuration do **not** require an image rebuild — unless
-they modify the baked fallback (the baked copy in the image).
+they modify the baked fallback (the baked copy in the image). This includes the pinned Paseo skills pack, which is versioned and refreshed as a managed mounted asset even though the bootstrap logic ships in the image.
 
 ## Workflows
 

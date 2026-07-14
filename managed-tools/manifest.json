@@ -108,6 +108,20 @@
         }
       ]
     },
+    "pi_extensions": {
+      "comment": "Pi coding agent extensions installed via pi install into ~/.pi/agent/npm",
+      "installMethod": "pi install npm:<pkg>",
+      "installPath": "~/.pi/agent/npm",
+      "statePath": "~/.local/state/pi-extensions",
+      "sourceType": "managed-tools-config",
+      "tools": [
+        {
+          "name": "pi-mcp-adapter",
+          "pkg": "pi-mcp-adapter",
+          "version": "2.11.0"
+        }
+      ]
+    },
     "go_toolchain": {
       "installMethod": "release-tarball",
       "installPath": "~/.local/go",

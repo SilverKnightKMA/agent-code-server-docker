@@ -50,7 +50,7 @@ docker compose up -d
 # 5. Open http://localhost:8880
 ```
 
-By default, `omp` and other managed tools are only installed into the volume when you set `AGENT_CODE_SERVER_AUTOINSTALL: "true"` in compose or run `npm run --prefix /opt/agent-code-server/managed-tools managed-tools:init` inside the container. That managed init now also installs the mounted Paseo skills pack for the managed agent CLIs.
+By default, `omp` and other managed tools are only installed into the volume when you set `AGENT_CODE_SERVER_AUTOINSTALL: "true"` in compose or run `npm run --prefix /opt/agent-code-server/managed-tools managed-tools:init` inside the container. That managed init now also installs the mounted Paseo skills pack and the `pi-mcp-adapter` Pi extension for the managed agent CLIs.
 
 ## Host-side preparation (details)
 
@@ -152,7 +152,7 @@ drwxr-xr-x 1000 1000 ... /home/coder/.cache
 | Tier | Examples | Persist |
 |------|----------|---------|
 | **1. Baked-in** | code-server, Paseo, Node.js, Bun, Python, Git, tmux, Docker CLI | In image |
-| **2. Managed mounted** | omp, pi, opencode, claude, codex, droid, copilot, TypeScript LSP, Go, Rust, gh, yq, ripgrep, Paseo skills | Volume data/ |
+| **2. Managed mounted** | omp, pi, opencode, claude, codex, droid, copilot, TypeScript LSP, Go, Rust, gh, yq, ripgrep, Paseo skills, pi-mcp-adapter | Volume data/ |
 | **3. Custom mounted** | npm install -g, go install, cargo install | Volume data/ |
 
 ## Paseo

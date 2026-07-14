@@ -380,11 +380,23 @@ async function updatePaseoSkills(manifest) {
   return true;
 }
 
+async function updatePiExtensions(manifest) {
+  let changed = false;
+  for (const tool of manifest.families.pi_extensions?.tools ?? []) {
+    const registry = await fetchJson(`https://registry.npmjs.org/${encodeURIComponent(tool.pkg)}`);
+    const latest = registry["dist-tags"]?.latest;
+    if (!latest) throw new Error(`${tool.name} npm package ${tool.pkg} missing latest dist-tag`);
+    changed = setVersion(tool, latest) || changed;
+  }
+  return changed;
+}
+
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
 let changed = false;
 
 changed = await updateNpmFamily(manifest) || changed;
 changed = await updatePaseoSkills(manifest) || changed;
+changed = await updatePiExtensions(manifest) || changed;
 changed = await updateGoToolchain(manifest) || changed;
 changed = await updateGoTools(manifest) || changed;
 changed = await updateReleaseFamilies(manifest) || changed;

@@ -79,6 +79,10 @@ install_paseo_skills() {
   echo "[bootstrap] Installing managed Paseo skills..."
   cd "${BUILDER_DIR}" && node scripts/managed-paseo-skills.mjs init
 }
+install_pi_extensions() {
+  echo "[bootstrap] Installing managed Pi extensions..."
+  cd "${BUILDER_DIR}" && node scripts/managed-pi-extensions.mjs init
+}
 
 init_npm_tools() {
   echo "[bootstrap] Installing managed npm tools..."
@@ -103,6 +107,7 @@ DO_ALL=false
 DO_OPENCODE=false
 DO_OMP=false
 DO_PASEO_SKILLS=false
+DO_PI_EXTENSIONS=false
 
 for arg in ${_BOOTSTRAP_ARGS:-}; do
   case "${arg}" in
@@ -113,6 +118,7 @@ for arg in ${_BOOTSTRAP_ARGS:-}; do
     --opencode) DO_OPENCODE=true ;;
     --omp) DO_OMP=true ;;
     --paseo-skills) DO_PASEO_SKILLS=true ;;
+    --pi-extensions) DO_PI_EXTENSIONS=true ;;
     --help|-h)
       echo "Usage: source bootstrap.sh  |  bash bootstrap.sh [flags]"
       echo ""
@@ -122,6 +128,7 @@ for arg in ${_BOOTSTRAP_ARGS:-}; do
       echo "  --omp           Install oh-my-pi (omp) via managed npm tools"
       echo "  --opencode      Install opencode-ai CLI"
       echo "  --paseo-skills  Install Paseo skills for managed agent CLIs"
+      echo "  --pi-extensions  Install Pi extensions (pi-mcp-adapter) for managed agent CLIs"
       echo "  --all           Install everything above"
       exit 0
       ;;
@@ -130,12 +137,13 @@ done
 unset _BOOTSTRAP_ARGS
 
 if [ "${DO_ALL}" = "true" ]; then
-  DO_NPM=true; DO_GO=true; DO_MOUNTED=true; DO_OPENCODE=true; DO_OMP=true; DO_PASEO_SKILLS=true
+  DO_NPM=true; DO_GO=true; DO_MOUNTED=true; DO_OPENCODE=true; DO_OMP=true; DO_PASEO_SKILLS=true; DO_PI_EXTENSIONS=true
 fi
 
 if [ "${DO_OPENCODE}" = "true" ]; then echo ""; echo "=== Installing opencode-ai ==="; install_opencode; fi
 if [ "${DO_OMP}" = "true" ]; then echo ""; echo "=== Installing oh-my-pi ==="; install_omp; fi
 if [ "${DO_PASEO_SKILLS}" = "true" ]; then echo ""; echo "=== Installing Paseo skills ==="; install_paseo_skills; fi
+if [ "${DO_PI_EXTENSIONS}" = "true" ]; then echo ""; echo "=== Installing Pi extensions ==="; install_pi_extensions; fi
 if [ "${DO_NPM}" = "true" ]; then echo ""; echo "=== Installing npm-managed tools ==="; init_npm_tools; fi
 if [ "${DO_GO}" = "true" ]; then echo ""; echo "=== Installing Go toolchain ==="; init_go_tools; fi
 if [ "${DO_MOUNTED}" = "true" ]; then echo ""; echo "=== Installing mounted release binaries ==="; init_mounted_tools; fi

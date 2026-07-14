@@ -74,13 +74,43 @@ async function readSettingsPackages() {
 
 
 // ── Install helpers ───────────────────────────────────────────────────────
+// Replicates what `pi install npm:<pkg>` does internally:
+//   1. npm install <pkg>@<version> into ~/.pi/agent/npm/
+//   2. Add "npm:<pkg>" to ~/.pi/agent/settings.json packages array
+// We don't shell out to `pi install` because the pi binary may not be on
+// PATH yet during managed-tools:init (it's installed as a managed npm tool
+// in the same init pass).
 async function runPiInstall(tool) {
-  console.log(`[install] pi install npm:${tool.name}@${tool.version}...`);
-  await execFileAsync("pi", ["install", `npm:${tool.name}@${tool.version}`], {
+  console.log(`[install] npm install ${tool.pkg}@${tool.version} into ${piNpmDir}...`);
+
+  // Step 1: npm install into the pi agent npm directory
+  await mkdir(piNpmDir, { recursive: true });
+  await execFileAsync("npm", [
+    "install", "--prefix", piNpmDir, "--ignore-scripts",
+    `${tool.pkg}@${tool.version}`,
+  ], {
     cwd: home,
     env: { ...process.env, HOME: home },
     maxBuffer: 10 * 1024 * 1024,
   });
+
+  // Step 2: Register in ~/.pi/agent/settings.json
+  const packageEntry = `npm:${tool.name}`;
+  let settings = {};
+  try {
+    settings = JSON.parse(await readFile(piSettingsPath, "utf8"));
+  } catch {
+    // settings.json doesn't exist yet
+  }
+  if (!Array.isArray(settings.packages)) {
+    settings.packages = [];
+  }
+  if (!settings.packages.includes(packageEntry)) {
+    settings.packages.push(packageEntry);
+    await mkdir(piAgentDir, { recursive: true });
+    await writeFile(piSettingsPath, JSON.stringify(settings, null, 2) + "\n", "utf8");
+    console.log(`[install] registered ${packageEntry} in pi settings.json`);
+  }
 }
 
 async function readInstalledVersions() {

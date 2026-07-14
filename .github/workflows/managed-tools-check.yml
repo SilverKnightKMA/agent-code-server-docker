@@ -17,6 +17,7 @@ on:
       - scripts/managed-go-tools.mjs
       - scripts/managed-mounted-tools.mjs
       - scripts/managed-paseo-skills.mjs
+      - scripts/managed-pi-extensions.mjs
       - scripts/managed-tools-config.mjs
       - scripts/managed-tools-output.mjs
       - scripts/managed-tools-status.mjs
@@ -37,6 +38,7 @@ on:
       - scripts/managed-go-tools.mjs
       - scripts/managed-mounted-tools.mjs
       - scripts/managed-paseo-skills.mjs
+      - scripts/managed-pi-extensions.mjs
       - scripts/managed-tools-config.mjs
       - scripts/managed-tools-output.mjs
       - scripts/managed-tools-status.mjs
@@ -258,7 +260,7 @@ jobs:
 
           failures=0
 
-          required_tools="pyright eslint prettier typescript typescript-language-server yaml-language-server bash-language-server omp pi opencode claude codex droid copilot paseo-skills go gopls shfmt gh yq ripgrep actionlint hadolint rustc cargo"
+          required_tools="pyright eslint prettier typescript typescript-language-server yaml-language-server bash-language-server omp pi opencode claude codex droid copilot paseo-skills pi-mcp-adapter go gopls shfmt gh yq ripgrep actionlint hadolint rustc cargo"
           
           paseo_status=$(echo "$output" | grep -E '^status.* tool=paseo-skills( |$)')
           if [ -z "$paseo_status" ]; then

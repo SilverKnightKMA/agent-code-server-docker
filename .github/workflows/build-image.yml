@@ -23,7 +23,7 @@ on:
       - scripts/managed-tools-output.mjs
       - scripts/managed-tools-status.mjs
       - .tmux.conf
-      - managed-tools/**
+      - managed-tools/baked-tools.json
       - .github/workflows/build-image.yml
   push:
     branches:
@@ -43,7 +43,7 @@ on:
       - scripts/managed-tools-output.mjs
       - scripts/managed-tools-status.mjs
       - .tmux.conf
-      - managed-tools/**
+      - managed-tools/baked-tools.json
       - .github/workflows/build-image.yml
   schedule:
     - cron: "17 */6 * * *"

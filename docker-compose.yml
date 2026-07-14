@@ -16,7 +16,7 @@ services:
       AGENT_CODE_SERVER_CONFIG_CACHE_DIR: /home/coder/.local/state/agent-code-server/config
       NPM_CONFIG_CACHE: /home/coder/.npm
       AGENT_CODE_SERVER_TMPDIR: /home/coder/.local/state/agent-code-server/tmp
-      # AGENT_CODE_SERVER_AUTOINSTALL: "true"  # install managed tools (including omp) on startup
+      # AGENT_CODE_SERVER_AUTOINSTALL: "true"  # install managed tools and required Paseo skills on startup
       # UI_PASSWORD: change-me
       # SUDO_PASSWORD: change-me
 

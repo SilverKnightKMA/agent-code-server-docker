@@ -93,12 +93,13 @@ manual rebase or the "Update branch" button.
 
 The `managed-tools/manifest.json` and `managed-tools/policy.json`
 files contain custom release tool version pins (gh, yq, ripgrep,
-actionlint, hadolint, go, rustc, cargo, npm packages). These are **not**
-managed by Dependabot because they are not standard package manifests.
+actionlint, hadolint, go, rustc, cargo, npm packages, and the mounted
+Paseo skills pack). These are **not** managed by Dependabot because they
+are not standard package manifests.
 
 Updates to managed-tools config are validated by the
-`managed-tools-check` workflow, which runs against the upstream online
-config and verifies all tools reach `state=equal` after init.
+`managed-tools-check` workflow, which runs against the branch's published
+managed-tools config and verifies all tools reach `state=equal` after init.
 
 If a managed-tools PR happens to touch `manifest.json` or `policy.json`,
 the auto-merge workflow will skip it — these files require explicit

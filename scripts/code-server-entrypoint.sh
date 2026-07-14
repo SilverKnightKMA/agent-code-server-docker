@@ -337,6 +337,8 @@ if [ "${AGENT_CODE_SERVER_AUTOINSTALL:-false}" = "true" ]; then
     PATH="${PATH}" \
     NPM_CONFIG_CACHE="${NPM_CONFIG_CACHE}" \
     TMUX_TMPDIR="${TMUX_TMPDIR}" \
+    PI_CODING_AGENT_DIR="${PI_CODING_AGENT_DIR:-${RUN_HOME}/.omp/agent}" \
+    CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-${RUN_HOME}/.claude}" \
     npm run --prefix /opt/agent-code-server/managed-tools managed-tools:init
 fi
 

@@ -50,7 +50,7 @@ docker compose up -d
 # 5. Open http://localhost:8880
 ```
 
-By default, `omp` and other managed tools are only installed into the volume when you set `AGENT_CODE_SERVER_AUTOINSTALL: "true"` in compose or run `npm run --prefix /opt/agent-code-server/managed-tools managed-tools:init` inside the container.
+By default, `omp` and other managed tools are only installed into the volume when you set `AGENT_CODE_SERVER_AUTOINSTALL: "true"` in compose or run `npm run --prefix /opt/agent-code-server/managed-tools managed-tools:init` inside the container. That managed init now also installs the mounted Paseo skills pack for the managed agent CLIs.
 
 ## Host-side preparation (details)
 
@@ -152,7 +152,7 @@ drwxr-xr-x 1000 1000 ... /home/coder/.cache
 | Tier | Examples | Persist |
 |------|----------|---------|
 | **1. Baked-in** | code-server, Paseo, Node.js, Bun, Python, Git, tmux, Docker CLI | In image |
-| **2. Managed mounted** | omp, pi, opencode, claude, codex, droid, copilot, TypeScript LSP, Go, Rust, gh, yq, ripgrep | Volume data/ |
+| **2. Managed mounted** | omp, pi, opencode, claude, codex, droid, copilot, TypeScript LSP, Go, Rust, gh, yq, ripgrep, Paseo skills | Volume data/ |
 | **3. Custom mounted** | npm install -g, go install, cargo install | Volume data/ |
 
 ## Paseo
@@ -179,6 +179,7 @@ agent CLIs (`omp`, `pi`, `opencode`, `claude`, `codex`, `droid`, `copilot`) alre
   this image's XDG env defaults) rather than a single dotdir. Check
   upstream source before assuming a new agent follows one of these same
   conventions.
+- Paseo skills are treated as a required **managed mounted** companion config for those agent CLIs, not as a baked image asset. They persist in the mounted home volume (`~/.agents/skills` as the canonical copy, symlinked into each agent's skill root) and update through `managed-tools:init` / `managed-tools:status` / `managed-tools:compare` against the pinned `managed-tools/manifest.json` version. The skill pack itself is **not baked into the image filesystem** — it is cloned at the pinned tag from `getpaseo/paseo` and kept current exactly like other mounted tooling.
 
 ### Self-hosted relay server (optional)
 

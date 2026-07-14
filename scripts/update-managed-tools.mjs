@@ -369,10 +369,22 @@ async function updateRustup(manifest) {
   return changed;
 }
 
+async function updatePaseoSkills(manifest) {
+  const family = manifest.families?.paseo_skills;
+  const tool = family?.tools?.[0];
+  if (!tool?.repo) return false;
+  const release = await fetchJson(`https://api.github.com/repos/${tool.repo}/releases/latest`, requestHeaders(`https://api.github.com/repos/${tool.repo}/releases/latest`));
+  const tagName = release.tag_name;
+  if (!tagName || tagName === tool.version) return false;
+  setVersion(tool, tagName, { stripV: false });
+  return true;
+}
+
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
 let changed = false;
 
 changed = await updateNpmFamily(manifest) || changed;
+changed = await updatePaseoSkills(manifest) || changed;
 changed = await updateGoToolchain(manifest) || changed;
 changed = await updateGoTools(manifest) || changed;
 changed = await updateReleaseFamilies(manifest) || changed;

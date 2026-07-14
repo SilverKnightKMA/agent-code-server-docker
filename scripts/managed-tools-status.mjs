@@ -20,6 +20,7 @@ const familyScripts = [
   "managed-npm-tools.mjs",
   "managed-go-tools.mjs",
   "managed-mounted-tools.mjs",
+  "managed-paseo-skills.mjs",
 ];
 
 function runFamily(scriptName) {

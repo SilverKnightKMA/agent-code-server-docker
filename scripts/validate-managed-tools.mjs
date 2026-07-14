@@ -10,6 +10,7 @@ const policy = JSON.parse(await readFile(policyPath, "utf8"));
 const requiredFamilies = [
   "npm",
   "paseo_skills",
+  "pi_extensions",
   "go_toolchain",
   "go_tools",
   "gh",

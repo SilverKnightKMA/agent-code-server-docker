@@ -47,40 +47,40 @@
         {
           "name": "omp",
           "pkg": "@oh-my-pi/pi-coding-agent",
-          "version": "16.4.8"
+          "version": "17.0.5"
         },
         {
           "name": "pi",
           "pkg": "@earendil-works/pi-coding-agent",
-          "version": "0.80.6"
+          "version": "0.80.10"
         },
         {
           "name": "opencode",
           "pkg": "opencode-ai",
-          "version": "1.17.18",
+          "version": "1.18.3",
           "needsPostinstall": true
         },
         {
           "name": "claude",
           "pkg": "@anthropic-ai/claude-code",
-          "version": "2.1.207",
+          "version": "2.1.215",
           "needsPostinstall": true
         },
         {
           "name": "codex",
           "pkg": "@openai/codex",
-          "version": "0.144.3"
+          "version": "0.144.6"
         },
         {
           "name": "droid",
           "pkg": "droid",
-          "version": "0.170.0",
+          "version": "0.175.1",
           "needsPostinstall": true
         },
         {
           "name": "copilot",
           "pkg": "@github/copilot",
-          "version": "1.0.70"
+          "version": "1.0.71"
         }
       ]
     },
@@ -93,7 +93,7 @@
       "tools": [
         {
           "name": "paseo-skills",
-          "version": "v0.1.105",
+          "version": "v0.1.110",
           "source": "https://github.com/getpaseo/paseo.git",
           "repo": "getpaseo/paseo",
           "agentDirs": [
@@ -206,7 +206,7 @@
         },
         {
           "name": "ripgrep",
-          "version": "15.1.0",
+          "version": "15.2.0",
           "repo": "BurntSushi/ripgrep",
           "assetPattern": "ripgrep-{version}-x86_64-unknown-linux-musl.tar.gz",
           "checksumAsset": "ripgrep-{version}-x86_64-unknown-linux-musl.tar.gz.sha256",
@@ -253,13 +253,13 @@
       "tools": [
         {
           "name": "rustc",
-          "version": "1.97.0",
+          "version": "1.97.1",
           "channel": "stable",
           "profile": "default"
         },
         {
           "name": "cargo",
-          "version": "1.97.0",
+          "version": "1.97.1",
           "channel": "stable",
           "profile": "default"
         }

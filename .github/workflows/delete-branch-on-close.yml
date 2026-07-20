@@ -1,0 +1,108 @@
+name: Delete Branch on Close
+
+# GitHub's `delete_branch_on_merge` setting is NOT honored when a PR is
+# merged via a bot/App installation token (the actor that performs the
+# merge becomes `github-actions[bot]` or similar). User-merged PRs on the
+# same repo are cleaned up correctly, but workflow-merged PRs leave the
+# head branch behind forever.
+#
+# This is a long-standing GitHub platform bug:
+# https://github.com/orgs/community/discussions/63409
+#
+# This workflow explicitly deletes the head branch when an automation
+# PR closes as merged, covering the gap.
+
+on:
+  pull_request_target:
+    types:
+      - closed
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: delete-branch-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  delete-head-branch:
+    name: Delete merged head branch
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Evaluate cleanup policy
+        id: policy
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_OWNER: ${{ github.event.pull_request.head.repo.owner.login }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          should_delete=false
+          reason=""
+
+          # Only delete branches in the same repository (forks are out of scope).
+          if [ "${HEAD_OWNER}" != "${REPO_OWNER}" ]; then
+            echo "Head branch lives in fork '${HEAD_OWNER}'; skipping."
+            echo "should_delete=false" >> "$GITHUB_OUTPUT"
+            echo "reason=head branch is in a fork" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Only delete automation-origin branches to avoid removing user branches.
+          case "${HEAD_REF}" in
+            automated/*|dependabot/*|deps/*|chore/*)
+              should_delete=true
+              reason="automation branch prefix matched"
+              ;;
+            *)
+              # Also delete when the PR author is a known automation bot.
+              case "${PR_AUTHOR}" in
+                dependabot[bot]|app/dependabot|github-actions[bot])
+                  should_delete=true
+                  reason="trusted automation author"
+                  ;;
+                *)
+                  reason="branch does not match automation policy"
+                  ;;
+              esac
+              ;;
+          esac
+
+          {
+            echo "should_delete=${should_delete}"
+            echo "reason=${reason}"
+            echo "head_ref=${HEAD_REF}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Delete head branch
+        if: steps.policy.outputs.should_delete == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_REF: ${{ steps.policy.outputs.head_ref }}
+        run: |
+          echo "Deleting branch '${HEAD_REF}' (reason: ${{ steps.policy.outputs.reason }})"
+          if gh api -X DELETE "repos/${GH_REPO}/git/refs/heads/${HEAD_REF}" 2>/tmp/err; then
+            echo "Deleted '${HEAD_REF}'."
+          else
+            err=$(cat /tmp/err)
+            # 422/409 "Reference does not exist" is a safe no-op.
+            case "${err}" in
+              *"Reference does not exist"*|*"reference does not exist"*|*"409"*|*"422"*)
+                echo "Branch '${HEAD_REF}' already gone; nothing to do."
+                ;;
+              *)
+                echo "::warning::Failed to delete '${HEAD_REF}': ${err}"
+                exit 1
+                ;;
+            esac
+          fi
+
+      - name: Skip cleanup
+        if: steps.policy.outputs.should_delete != 'true'
+        run: |
+          echo "Not deleting head branch."
+          echo "Reason: ${{ steps.policy.outputs.reason }}"

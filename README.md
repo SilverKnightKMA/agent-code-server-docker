@@ -147,6 +147,15 @@ This lets DinD containers resolve outer container names (e.g. `mt5_3`), host
 search-domain names (e.g. Tailscale `ser6`), and public names. Set `DIND_DNS=false`
 to disable.
 
+> **Limitation — user-defined (custom) networks.** Docker pins the embedded DNS
+> resolver (`127.0.0.11`) for containers attached to user-defined networks and
+> ignores the daemon-wide `dns` setting, `docker run --dns`, compose `dns:`, and
+> `docker network create --opt` for those networks. The DNS bridge above therefore
+> only covers containers on the **default bridge** (i.e. spawned without a
+> `--network` flag, or with `--network bridge`). If your DinD workload attaches
+> containers to a user-defined network, outer container names will not resolve —
+> use the default bridge or `--network host` instead.
+
 ### Avoiding CIDR collisions
 
 If the host network overlaps with the default DinD bridge (`172.17.0.0/16`), mount a

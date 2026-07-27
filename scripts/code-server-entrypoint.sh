@@ -286,6 +286,7 @@ for appdir in \
   "${RUN_HOME}/.omp" \
   "${RUN_HOME}/.factory" \
   "${RUN_HOME}/.local/share/opencode" \
+  "${RUN_HOME}/.config/opencode" \
   "${RUN_HOME}/.local/bin" \
   "${RUN_HOME}/.local/go" \
   "${RUN_HOME}/.local/pip" \
@@ -350,6 +351,7 @@ gosu "${RUN_USER}" sh -c '
   check_dir "omp-config" "/home/coder/.omp"
   check_dir "factory-config" "/home/coder/.factory"
   check_dir "opencode-data" "/home/coder/.local/share/opencode"
+  check_dir "opencode-config" "/home/coder/.config/opencode"
 
   if [ "${CHECK_FAILED}" = "true" ]; then
     echo "[DIAGNOSTICS] Preflight failed. Environment:" >&2
@@ -368,7 +370,7 @@ gosu "${RUN_USER}" sh -c '
     echo "--- namei .cache/code-server ---" >&2
     namei -l /home/coder/.cache/code-server 2>/dev/null >&2 || echo "(namei unavailable)" >&2
     echo "--- ls -ldn ---" >&2
-    for p in /home/coder /home/coder/.config /home/coder/.config/code-server /home/coder/.local /home/coder/.local/share /home/coder/.local/share/code-server /home/coder/.cache /home/coder/.cache/code-server /home/coder/.paseo /home/coder/.claude /home/coder/.codex /home/coder/.pi /home/coder/.omp /home/coder/.factory /home/coder/.local/share/opencode; do
+    for p in /home/coder /home/coder/.config /home/coder/.config/code-server /home/coder/.local /home/coder/.local/share /home/coder/.local/share/code-server /home/coder/.cache /home/coder/.cache/code-server /home/coder/.paseo /home/coder/.claude /home/coder/.codex /home/coder/.pi /home/coder/.omp /home/coder/.factory /home/coder/.local/share/opencode /home/coder/.config/opencode; do
       ls -ldn "${p}" 2>/dev/null || echo "  ${p}: (does not exist)" >&2
     done
     echo "--- mount | grep /home/coder ---" >&2

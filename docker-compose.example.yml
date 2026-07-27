@@ -18,6 +18,10 @@ services:
       # AGENT_CODE_SERVER_AUTOINSTALL: "true"  # install managed tools and required Paseo skills on startup
       # UI_PASSWORD: change-me
       # ENABLE_DIND: "true" — requires privileged & /var/lib/docker volume
+      #   With ENABLE_DIND=true a dnsmasq forwarder is auto-started so
+      #   containers spawned by the nested daemon resolve outer container
+      #   names (siblings on the host network) and the host's search-domain
+      #   names. Set DIND_DNS=false to disable.
 
       # Paseo (agent orchestration daemon + web UI, baked in alongside code-server)
       # PASEO_PASSWORD: change-me
@@ -73,6 +77,12 @@ services:
       # Optional Docker-in-Docker state (uncomment with ENABLE_DIND=true)
       # - ./data/docker:/var/lib/docker
       # - ./data/containerd:/var/lib/containerd
+      #
+      # Optional DinD daemon config (CIDR collision avoidance):
+      # mount a custom daemon.json to change the DinD bridge CIDR (bip) and
+      # default-address-pools. The entrypoint merges its "dns" key in, so
+      # both coexist:
+      # - ./dockerd-daemon.example.json:/etc/docker/daemon.json:ro
 
     # Optional Docker-in-Docker (uncomment with ENABLE_DIND=true)
     # privileged: true

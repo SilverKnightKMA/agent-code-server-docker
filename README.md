@@ -127,6 +127,38 @@ volumes:
 The container must run as root for dockerd to start. `coder` is added to the `docker`
 group so it can run `docker info` without sudo.
 
+### DinD DNS bridge
+
+Containers spawned by the nested DinD daemon cannot reach `127.0.0.11` (the outer
+daemon's embedded DNS) — it is loopback, isolated per network namespace. Without help,
+DinD containers fall back to public DNS and fail to resolve outer container names
+(siblings on the host network) or the host's search-domain names.
+
+When `ENABLE_DIND=true` (and `DIND_DNS` is not `false`), the entrypoint:
+
+1. Computes the DinD `docker0` gateway (from the `bip` in `/etc/docker/daemon.json`,
+   defaulting to `172.17.0.1`).
+2. Starts a `dnsmasq` forwarder bound to that gateway, forwarding to `127.0.0.11`
+   (reachable in the container's netns).
+3. Merges `"dns": [<gateway>]` into `/etc/docker/daemon.json` so every DinD-spawned
+   container inherits the forwarder via `resolv.conf`.
+
+This lets DinD containers resolve outer container names (e.g. `mt5_3`), host
+search-domain names (e.g. Tailscale `ser6`), and public names. Set `DIND_DNS=false`
+to disable.
+
+### Avoiding CIDR collisions
+
+If the host network overlaps with the default DinD bridge (`172.17.0.0/16`), mount a
+custom `/etc/docker/daemon.json` to change the bridge CIDR (`bip`) and
+`default-address-pools`. The entrypoint merges its `dns` key into your file, so both
+concerns coexist:
+
+```yaml
+volumes:
+  - ./dockerd-daemon.example.json:/etc/docker/daemon.json:ro
+```
+
 Without DinD → no privileged mode needed, workloads run safely.
 
 ## Diagnostics

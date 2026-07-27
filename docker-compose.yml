@@ -31,6 +31,12 @@ services:
       # Docker-in-Docker. Uncomment these blocks to enable:
       # ENABLE_DIND: "true"
       # (also uncomment privileged, security_opt, and /var/lib/docker volumes below)
+      #
+      # With ENABLE_DIND=true a dnsmasq forwarder is auto-started so containers
+      # spawned by the nested daemon can resolve outer container names (siblings
+      # on the host network) and the host's search-domain names. The forwarder
+      # listens on the DinD docker0 gateway and forwards to 127.0.0.11 (the
+      # outer daemon's embedded DNS). Set DIND_DNS=false to disable.
 
     restart: unless-stopped
     volumes:
@@ -80,6 +86,12 @@ services:
       # === Optional Docker-in-Docker state (uncomment with ENABLE_DIND=true) ===
       # - ./data/docker:/var/lib/docker
       # - ./data/containerd:/var/lib/containerd
+      #
+      # === Optional DinD daemon config (CIDR collision avoidance) ===
+      # Mount a custom daemon.json to change the DinD bridge CIDR (bip) and
+      # default-address-pools when they overlap with host networks. The
+      # entrypoint merges its "dns" key into this file, so both coexist:
+      # - ./dockerd-daemon.example.json:/etc/docker/daemon.json:ro
 
     # === Optional Docker-in-Docker runtime (uncomment with ENABLE_DIND=true) ===
     # privileged: true

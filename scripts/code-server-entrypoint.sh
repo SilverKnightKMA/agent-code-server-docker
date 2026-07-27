@@ -58,6 +58,52 @@ if [ "${ENABLE_DIND:-false}" = "true" ]; then
 
   export DOCKER_HOST="${DOCKER_HOST:-unix:///var/run/docker.sock}"
 
+  # ── DinD DNS bridge ─────────────────────────────────────────────────
+  # Containers spawned by the nested DinD daemon cannot reach 127.0.0.11
+  # (the outer daemon's embedded DNS): 127.0.0.11 is loopback, isolated per
+  # network namespace. DinD containers then fall back to public DNS and fail
+  # to resolve outer container names (siblings on the host network) or host
+  # search-domain names.
+  #
+  # Fix: a dnsmasq forwarder in this netns, listening on the DinD docker0
+  # gateway (DinD containers' default route), forwarding to 127.0.0.11
+  # (reachable here, same netns as the outer container). The daemon "dns"
+  # key makes every spawned container inherit that gateway via resolv.conf.
+  #
+  # If the user mounts /etc/docker/daemon.json (e.g. dockerd-daemon.example.json
+  # for CIDR collision avoidance via "bip"/"default-address-pools"), we merge
+  # "dns" into it with jq rather than overwriting: both concerns coexist.
+  mkdir -p /etc/docker
+  _DIND_DAEMON_JSON="/etc/docker/daemon.json"
+  if [ -f "${_DIND_DAEMON_JSON}" ]; then
+    # Gateway = IP portion of "bip" (e.g. 10.17.0.1/24 -> 10.17.0.1).
+    _DIND_BIP="$(jq -r '.bip // empty' "${_DIND_DAEMON_JSON}" 2>/dev/null || true)"
+    if [ -n "${_DIND_BIP}" ]; then
+      DIND_DNS_GW="${DIND_DNS_GW:-$(printf '%s' "${_DIND_BIP}" | cut -d/ -f1)}"
+    fi
+  fi
+  DIND_DNS_GW="${DIND_DNS_GW:-172.17.0.1}"
+
+  if [ "${DIND_DNS:-true}" = "true" ] && command -v dnsmasq >/dev/null 2>&1; then
+    # Merge dns:[<gateway>] into daemon.json (create if absent), preserving
+    # user keys. Idempotent: skip if already present.
+    _NEEDS_MERGE=true
+    if [ -f "${_DIND_DAEMON_JSON}" ] && jq -e --arg gw "${DIND_DNS_GW}" \
+        '(.dns // []) | index($gw) >= 0' "${_DIND_DAEMON_JSON}" >/dev/null 2>&1; then
+      _NEEDS_MERGE=false
+    fi
+    if [ "${_NEEDS_MERGE}" = "true" ]; then
+      if [ -f "${_DIND_DAEMON_JSON}" ]; then
+        jq --arg gw "${DIND_DNS_GW}" '. + {dns: ((.dns // []) + [$gw] | unique)}' \
+          "${_DIND_DAEMON_JSON}" > "${_DIND_DAEMON_JSON}.tmp" \
+          && mv "${_DIND_DAEMON_JSON}.tmp" "${_DIND_DAEMON_JSON}"
+      else
+        printf '{"dns":["%s"]}\n' "${DIND_DNS_GW}" > "${_DIND_DAEMON_JSON}"
+      fi
+      echo "[dind] DNS bridge: added ${DIND_DNS_GW} to ${_DIND_DAEMON_JSON}"
+    fi
+  fi
+
   # When dockerd starts inside DinD, the docker group may not exist yet
   # inside the container. It's safe — dockerd creates the socket without a group.
   if ! docker info >/dev/null 2>&1; then
@@ -76,6 +122,21 @@ if [ "${ENABLE_DIND:-false}" = "true" ]; then
     echo "[dind] dockerd is ready"
   else
     echo "[dind] docker daemon already reachable"
+  fi
+
+  # Start dnsmasq forwarding DinD DNS to the outer daemon's embedded DNS.
+  # 127.0.0.11 is reachable in this netns but NOT from inside DinD-spawned
+  # containers, which is exactly why this forwarder is needed.
+  if [ "${DIND_DNS:-true}" = "true" ] && command -v dnsmasq >/dev/null 2>&1; then
+    echo "[dind] starting dnsmasq DNS bridge on ${DIND_DNS_GW}:53 -> 127.0.0.11:53..."
+    dnsmasq \
+      --no-hosts \
+      --no-resolv \
+      --bind-interfaces \
+      --listen-address="${DIND_DNS_GW}" \
+      --server=127.0.0.11 \
+      --pid-file=/run/dind-dnsmasq.pid \
+      >/var/log/dind-dnsmasq.log 2>&1 &
   fi
 
   # Make /var/run/docker.sock accessible via docker group

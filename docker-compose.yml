@@ -76,6 +76,7 @@ services:
       - ./data/omp:/home/coder/.omp
       - ./data/factory:/home/coder/.factory
       - ./data/opencode:/home/coder/.local/share/opencode
+      - ./data/config/opencode:/home/coder/.config/opencode
 
       # === Optional tmux persistence (uncomment when AGENT_CODE_SERVER_TMUX_PERSIST=true) ===
       # - ./data/tmux-state:/home/coder/.local/state/tmux

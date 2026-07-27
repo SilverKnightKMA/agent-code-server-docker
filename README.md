@@ -24,7 +24,7 @@ mkdir -p \
   data/cargo data/rustup data/go \
   data/agent-code-server-cache data/tmux-state \
   data/entrypoint.d \
-  data/paseo data/config/claude data/config/codex data/pi data/omp data/factory data/opencode
+  data/paseo data/config/claude data/config/codex data/pi data/omp data/factory data/opencode data/config/opencode
 
 # 2. Set ownership (UID 1000 = coder inside container)
 # Skip if data/ does not exist yet; run after first creation.
@@ -37,7 +37,7 @@ sudo chown -R 1000:1000 \
   data/cargo data/rustup data/go \
   data/agent-code-server-cache data/tmux-state \
   data/entrypoint.d \
-  data/paseo data/config/claude data/config/codex data/pi data/omp data/factory data/opencode
+  data/paseo data/config/claude data/config/codex data/pi data/omp data/factory data/opencode data/config/opencode
 
 # DO NOT chown /var/lib/docker or /var/lib/containerd
 
@@ -71,7 +71,7 @@ sudo chown 1000:1000 \
   data/cargo data/rustup data/go \
   data/agent-code-server-cache data/tmux-state \
   data/entrypoint.d \
-  data/paseo data/config/claude data/config/codex data/pi data/omp data/factory data/opencode
+  data/paseo data/config/claude data/config/codex data/pi data/omp data/factory data/opencode data/config/opencode
 ```
 
 ### SSH keys
@@ -202,15 +202,18 @@ agent CLIs (`omp`, `pi`, `opencode`, `claude`, `codex`, `droid`, `copilot`) alre
 - Set `PASEO_HOSTNAMES` if you reach it through a reverse-proxied DNS name.
 - Daemon state and agent credentials persist under `data/paseo`,
   `data/config/claude`, `data/config/codex`, `data/pi`, `data/omp`,
-  `data/factory`, `data/opencode` (mounted to `~/.paseo`, `~/.claude`,
-  `~/.codex`, `~/.pi`, `~/.omp`, `~/.factory`, `~/.local/share/opencode`
-  respectively). Each agent CLI has its own convention — `codex`/`claude`
-  use dedicated dotdirs, `omp`/`pi` use `~/.omp`/`~/.pi`, `droid` uses
-  `~/.factory`, and `opencode` follows the XDG base dir spec (credentials
-  live under `$XDG_DATA_HOME/opencode`, i.e. `~/.local/share/opencode` given
-  this image's XDG env defaults) rather than a single dotdir. Check
-  upstream source before assuming a new agent follows one of these same
-  conventions.
+  `data/factory`, `data/opencode`, `data/config/opencode` (mounted to
+  `~/.paseo`, `~/.claude`, `~/.codex`, `~/.pi`, `~/.omp`, `~/.factory`,
+  `~/.local/share/opencode`, `~/.config/opencode` respectively). Each
+  agent CLI has its own convention — `codex`/`claude` use dedicated
+  dotdirs, `omp`/`pi` use `~/.omp`/`~/.pi`, `droid` uses `~/.factory`,
+  and `opencode` follows the XDG base dir spec: **config** (`opencode.jsonc`,
+  providers, models) lives under `$XDG_CONFIG_HOME/opencode`
+  (`~/.config/opencode`) while **data** (session DB, logs) lives under
+  `$XDG_DATA_HOME/opencode` (`~/.local/share/opencode`). Both dirs must be
+  mounted or your opencode config resets to defaults on every container
+  restart. Check upstream source before assuming a new agent follows one
+  of these same conventions.
 - Paseo skills are treated as a required **managed mounted** companion config for those agent CLIs, not as a baked image asset. They persist in the mounted home volume (`~/.agents/skills` as the canonical copy, symlinked into each agent's skill root) and update through `managed-tools:init` / `managed-tools:status` / `managed-tools:compare` against the pinned `managed-tools/manifest.json` version. The skill pack itself is **not baked into the image filesystem** — it is cloned at the pinned tag from `getpaseo/paseo` and kept current exactly like other mounted tooling.
 
 ### Self-hosted relay server (optional)

@@ -61,12 +61,8 @@ npm config set prefix "${MANAGED_NPM_PREFIX}" 2>/dev/null || true
 
 # ── Functions ──────────────────────────────────────────────────────────────
 install_opencode() {
-  if command -v opencode >/dev/null 2>&1; then
-    echo "[bootstrap] opencode already available: $(opencode --version 2>&1)"
-    return 0
-  fi
-  echo "[bootstrap] Installing opencode-ai..."
-  npm install -g opencode-ai 2>&1
+  echo "[bootstrap] Installing opencode-ai via managed npm tools..."
+  cd "${BUILDER_DIR}" && node scripts/managed-npm-tools.mjs init opencode
   echo "[bootstrap] opencode-ai installed: $(opencode --version 2>&1)"
 }
 

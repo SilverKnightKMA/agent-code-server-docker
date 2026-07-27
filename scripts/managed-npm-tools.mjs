@@ -74,10 +74,33 @@ async function npmList(prefix) {
   if (!(await exists(prefix))) {
     return { dependencies: {} };
   }
-  const { stdout } = await execFileAsync("npm", ["list", "--depth=0", "--json", "--prefix", prefix], {
-    env: { ...process.env },
-    maxBuffer: 10 * 1024 * 1024,
-  });
+  // `npm list --json` exits non-zero (ELSPROBLEMS) when an installed package
+  // version does not match the manifest pin in package.json. The JSON payload
+  // on stdout is still well-formed and complete in that case, so tolerate the
+  // non-zero exit and parse what npm emitted. This lets `init` proceed past
+  // the version probe into the actual `npm install` that reconciles the tree.
+  let stdout;
+  try {
+    ({ stdout } = await execFileAsync(
+      "npm",
+      ["list", "--depth=0", "--json", "--prefix", prefix],
+      {
+        env: { ...process.env },
+        maxBuffer: 10 * 1024 * 1024,
+      },
+    ));
+  } catch (error) {
+    const stderr = String(error.stderr ?? "");
+    const isElsProblems = error.code === 1 && stderr.includes("ELSPROBLEMS");
+    if (
+      !isElsProblems ||
+      typeof error.stdout !== "string" ||
+      error.stdout.trim() === ""
+    ) {
+      throw error;
+    }
+    stdout = error.stdout;
+  }
   return JSON.parse(stdout);
 }
 

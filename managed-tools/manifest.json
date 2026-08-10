@@ -17,7 +17,7 @@
         {
           "name": "eslint",
           "pkg": "eslint",
-          "version": "10.8.0"
+          "version": "10.8.1"
         },
         {
           "name": "prettier",
@@ -47,40 +47,40 @@
         {
           "name": "omp",
           "pkg": "@oh-my-pi/pi-coding-agent",
-          "version": "17.2.5"
+          "version": "17.2.12"
         },
         {
           "name": "pi",
           "pkg": "@earendil-works/pi-coding-agent",
-          "version": "0.83.0"
+          "version": "0.84.1"
         },
         {
           "name": "opencode",
           "pkg": "opencode-ai",
-          "version": "1.18.11",
+          "version": "1.18.15",
           "needsPostinstall": true
         },
         {
           "name": "claude",
           "pkg": "@anthropic-ai/claude-code",
-          "version": "2.1.220",
+          "version": "2.1.226",
           "needsPostinstall": true
         },
         {
           "name": "codex",
           "pkg": "@openai/codex",
-          "version": "0.146.0"
+          "version": "0.147.0"
         },
         {
           "name": "droid",
           "pkg": "droid",
-          "version": "0.186.0",
+          "version": "0.190.0",
           "needsPostinstall": true
         },
         {
           "name": "copilot",
           "pkg": "@github/copilot",
-          "version": "1.0.77"
+          "version": "1.0.78"
         }
       ]
     },
@@ -93,7 +93,7 @@
       "tools": [
         {
           "name": "paseo-skills",
-          "version": "v0.2.5",
+          "version": "v0.3.1",
           "source": "https://github.com/getpaseo/paseo.git",
           "repo": "getpaseo/paseo",
           "agentDirs": [
@@ -118,7 +118,7 @@
         {
           "name": "pi-mcp-adapter",
           "pkg": "pi-mcp-adapter",
-          "version": "2.18.0"
+          "version": "2.21.2"
         }
       ]
     },

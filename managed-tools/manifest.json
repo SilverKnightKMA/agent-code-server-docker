@@ -12,7 +12,7 @@
         {
           "name": "pyright",
           "pkg": "pyright",
-          "version": "1.1.411"
+          "version": "1.1.413"
         },
         {
           "name": "eslint",
@@ -47,23 +47,23 @@
         {
           "name": "omp",
           "pkg": "@oh-my-pi/pi-coding-agent",
-          "version": "17.2.12"
+          "version": "17.3.5"
         },
         {
           "name": "pi",
           "pkg": "@earendil-works/pi-coding-agent",
-          "version": "0.84.1"
+          "version": "0.84.2"
         },
         {
           "name": "opencode",
           "pkg": "opencode-ai",
-          "version": "1.18.15",
+          "version": "1.18.18",
           "needsPostinstall": true
         },
         {
           "name": "claude",
           "pkg": "@anthropic-ai/claude-code",
-          "version": "2.1.226",
+          "version": "2.1.233",
           "needsPostinstall": true
         },
         {
@@ -74,13 +74,13 @@
         {
           "name": "droid",
           "pkg": "droid",
-          "version": "0.190.0",
+          "version": "0.197.0",
           "needsPostinstall": true
         },
         {
           "name": "copilot",
           "pkg": "@github/copilot",
-          "version": "1.0.78"
+          "version": "1.0.80"
         }
       ]
     },
@@ -93,7 +93,7 @@
       "tools": [
         {
           "name": "paseo-skills",
-          "version": "v0.3.1",
+          "version": "v0.4.0",
           "source": "https://github.com/getpaseo/paseo.git",
           "repo": "getpaseo/paseo",
           "agentDirs": [
@@ -118,7 +118,7 @@
         {
           "name": "pi-mcp-adapter",
           "pkg": "pi-mcp-adapter",
-          "version": "2.21.2"
+          "version": "2.26.0"
         }
       ]
     },
@@ -133,7 +133,7 @@
       "tools": [
         {
           "name": "go",
-          "version": "1.27rc2",
+          "version": "1.27rc3",
           "os": "linux",
           "arch": "amd64",
           "assetPattern": "go{version}.linux-amd64.tar.gz"

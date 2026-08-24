@@ -17,7 +17,7 @@
         {
           "name": "eslint",
           "pkg": "eslint",
-          "version": "10.8.1"
+          "version": "10.9.0"
         },
         {
           "name": "prettier",
@@ -32,7 +32,7 @@
         {
           "name": "typescript-language-server",
           "pkg": "typescript-language-server",
-          "version": "5.3.0"
+          "version": "6.0.0"
         },
         {
           "name": "yaml-language-server",
@@ -47,7 +47,7 @@
         {
           "name": "omp",
           "pkg": "@oh-my-pi/pi-coding-agent",
-          "version": "17.3.5"
+          "version": "18.0.4"
         },
         {
           "name": "pi",
@@ -57,24 +57,24 @@
         {
           "name": "opencode",
           "pkg": "opencode-ai",
-          "version": "1.18.18",
+          "version": "1.18.21",
           "needsPostinstall": true
         },
         {
           "name": "claude",
           "pkg": "@anthropic-ai/claude-code",
-          "version": "2.1.233",
+          "version": "2.1.241",
           "needsPostinstall": true
         },
         {
           "name": "codex",
           "pkg": "@openai/codex",
-          "version": "0.147.0"
+          "version": "0.149.1"
         },
         {
           "name": "droid",
           "pkg": "droid",
-          "version": "0.197.0",
+          "version": "0.202.0",
           "needsPostinstall": true
         },
         {
@@ -93,7 +93,7 @@
       "tools": [
         {
           "name": "paseo-skills",
-          "version": "v0.4.0",
+          "version": "v0.5.1",
           "source": "https://github.com/getpaseo/paseo.git",
           "repo": "getpaseo/paseo",
           "agentDirs": [
@@ -118,7 +118,7 @@
         {
           "name": "pi-mcp-adapter",
           "pkg": "pi-mcp-adapter",
-          "version": "2.26.0"
+          "version": "2.27.0"
         }
       ]
     },
@@ -172,7 +172,7 @@
       "tools": [
         {
           "name": "gh",
-          "version": "2.97.0",
+          "version": "2.98.0",
           "repo": "cli/cli",
           "os": "linux",
           "arch": "amd64",
@@ -194,7 +194,7 @@
       "tools": [
         {
           "name": "yq",
-          "version": "4.53.3",
+          "version": "4.53.6",
           "repo": "mikefarah/yq",
           "assetPattern": "yq_linux_amd64",
           "checksumAsset": "checksums",
@@ -253,13 +253,13 @@
       "tools": [
         {
           "name": "rustc",
-          "version": "1.97.1",
+          "version": "1.98.0",
           "channel": "stable",
           "profile": "default"
         },
         {
           "name": "cargo",
-          "version": "1.97.1",
+          "version": "1.98.0",
           "channel": "stable",
           "profile": "default"
         }

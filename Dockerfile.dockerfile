@@ -30,7 +30,7 @@ COPY vendor/tmux-resurrect /opt/agent-code-server/managed-tools/vendor/tmux-resu
 COPY vendor/tmux-continuum /opt/agent-code-server/managed-tools/vendor/tmux-continuum
 
 # ── Stage: code-server build ────────────────────────────────────────
-FROM debian:13-slim@sha256:3a39a0592364683e6bab97937b72cad5a8fa6dcbbee90edb3bb48c7f8e94f258 AS code-server-builder
+FROM debian:13-slim@sha256:d7e12182ce18b85b93007c1dedf31f2d29e01ccf3182cc4017c709b6259bc132 AS code-server-builder
 
 # We copy code-server from the official release .deb rather than building
 # from source. This stage pins the exact version and architecture.
@@ -59,7 +59,7 @@ RUN mkdir /relay \
      | tar xzf - -C /relay
 
 # ── Stage: runtime ──────────────────────────────────────────────────
-FROM debian:13-slim@sha256:3a39a0592364683e6bab97937b72cad5a8fa6dcbbee90edb3bb48c7f8e94f258 AS runtime
+FROM debian:13-slim@sha256:d7e12182ce18b85b93007c1dedf31f2d29e01ccf3182cc4017c709b6259bc132 AS runtime
 
 ENV DEBIAN_FRONTEND=noninteractive
 

@@ -1,0 +1,140 @@
+name: Update Baked Paseo
+
+permissions:
+  contents: write
+  pull-requests: write
+
+on:
+  schedule:
+    # Tuesday 03:30 UTC — one day after the Monday Tier-2 sweep, one day
+    # before nothing else; keeps runner load spread across the week.
+    - cron: "30 3 * * 2"
+  workflow_dispatch:
+
+concurrency:
+  group: update-baked-paseo
+  cancel-in-progress: false
+
+jobs:
+  update-baked-paseo:
+    name: Open PR to bump baked paseo daemon when upstream releases
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Checkout builder repository
+        uses: actions/checkout@v7
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: 1
+
+      - name: Detect upstream release and compute bump
+        id: detect
+        run: |
+          set -euo pipefail
+          CURRENT=$(node -e "const b=require('./managed-tools/baked-tools.json');const t=b.tools.find(t=>t.name==='paseo');console.log(t.currentVersion)")
+          LATEST=$(npm view @getpaseo/cli dist-tags.latest)
+          echo "current=${CURRENT}" >> "$GITHUB_OUTPUT"
+          echo "latest=${LATEST}" >> "$GITHUB_OUTPUT"
+          echo "Baked paseo: ${CURRENT} | npm dist-tags.latest: ${LATEST}"
+
+          if [ "$LATEST" = "$CURRENT" ]; then
+            echo "No drift — baked paseo already at latest stable."
+            echo "drift=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "drift=true" >> "$GITHUB_OUTPUT"
+
+          # The paseo_skills pin clones tag v<LATEST> from getpaseo/paseo.
+          # Without a matching tag the skills installer would fail, so gate
+          # the whole bump on the tag existing.
+          if ! git ls-remote --tags https://github.com/getpaseo/paseo "refs/tags/v${LATEST}" | grep -q .; then
+            echo "::warning::npm @getpaseo/cli ${LATEST} is out but getpaseo/paseo has no v${LATEST} tag yet — skipping bump (baked-tools-monitor still reports the drift)."
+            echo "drift=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+      - name: Apply lockstep bumps
+        if: steps.detect.outputs.drift == 'true'
+        env:
+          CURRENT: ${{ steps.detect.outputs.current }}
+          LATEST: ${{ steps.detect.outputs.latest }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PYEOF'
+          import json, os
+
+          current, latest = os.environ["CURRENT"], os.environ["LATEST"]
+          assert current != latest, "refusing no-op bump"
+
+          # Dockerfile npm pins
+          p = "Dockerfile.dockerfile"; s = open(p).read()
+          for pkg in ("cli", "server"):
+              old, new = f"@getpaseo/{pkg}@{current}", f"@getpaseo/{pkg}@{latest}"
+              assert s.count(old) == 1, f"expected exactly one {old} in {p}"
+              s = s.replace(old, new)
+          open(p, "w").write(s)
+
+          # baked-tools.json inventory — paseo tool only, text-level to keep
+          # byte-identical formatting elsewhere
+          p = "managed-tools/baked-tools.json"; s = open(p).read()
+          old_cv, new_cv = f'"currentVersion": "{current}"', f'"currentVersion": "{latest}"'
+          assert s.count(old_cv) == 1, f"expected exactly one {old_cv}"
+          s = s.replace(old_cv, new_cv)
+          for pkg in ("cli", "server"):
+              old = f"@getpaseo/{pkg}@{current}"
+              assert s.count(old) == 1, f"expected exactly one {old} in {p}"
+              s = s.replace(old, f"@getpaseo/{pkg}@{latest}")
+          json.loads(s)  # must stay valid
+          open(p, "w").write(s)
+
+          # manifest.json paseo_skills pin
+          p = "managed-tools/manifest.json"; s = open(p).read()
+          old_pin, new_pin = f'"version": "v{current}"', f'"version": "v{latest}"'
+          assert s.count(old_pin) == 1, f"expected exactly one {old_pin} in {p}"
+          s = s.replace(old_pin, new_pin)
+          json.loads(s)
+          open(p, "w").write(s)
+
+          print(f"lockstep bump {current} -> {latest} applied to 3 files")
+          PYEOF
+
+      - name: Validate managed tool manifest
+        if: steps.detect.outputs.drift == 'true'
+        run: npm run validate:managed-tools
+
+      - name: Create pull request
+        if: steps.detect.outputs.drift == 'true'
+        uses: peter-evans/create-pull-request@v8.1.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          commit-message: "chore: bump baked paseo ${{ steps.detect.outputs.current }} -> ${{ steps.detect.outputs.latest }} (cli + server + skills pin)"
+          title: "chore: bump baked paseo ${{ steps.detect.outputs.current }} -> ${{ steps.detect.outputs.latest }} (cli + server + skills pin)"
+          body: |
+            Automated weekly bump of the baked (Tier 1) Paseo daemon.
+
+            Lockstep changes per repo convention:
+            - `Dockerfile.dockerfile`: `@getpaseo/cli@${{ steps.detect.outputs.latest }}` + `@getpaseo/server@${{ steps.detect.outputs.latest }}`
+            - `managed-tools/baked-tools.json`: paseo `currentVersion` + `sourceDetail`
+            - `managed-tools/manifest.json`: `paseo_skills` pin `v${{ steps.detect.outputs.latest }}` (tag verified on getpaseo/paseo)
+
+            Review checklist:
+            - [ ] Skim the upstream release notes between ${{ steps.detect.outputs.current }} and ${{ steps.detect.outputs.latest }}
+            - [ ] CI is green (Build Docker image + Install & verify managed tools)
+
+            After merge: build-image.yml publishes the image; the host then pulls and recreates the container.
+          branch: automated/bump-baked-paseo
+          delete-branch: true
+          add-paths: |
+            Dockerfile.dockerfile
+            managed-tools/baked-tools.json
+            managed-tools/manifest.json
+          labels: |
+            automated
+            dependencies

@@ -383,6 +383,14 @@ async function updatePaseoSkills(manifest) {
 async function updatePiExtensions(manifest) {
   let changed = false;
   for (const tool of manifest.families.pi_extensions?.tools ?? []) {
+    if (tool.sourceType === "github") {
+      const release = await fetchJson(`https://api.github.com/repos/${tool.repo}/releases/latest`, requestHeaders(`https://api.github.com/repos/${tool.repo}/releases/latest`));
+      const tagName = release.tag_name;
+      if (!tagName || tagName === tool.version) continue;
+      setVersion(tool, tagName, { stripV: false });
+      changed = true;
+      continue;
+    }
     const registry = await fetchJson(`https://registry.npmjs.org/${encodeURIComponent(tool.pkg)}`);
     const latest = registry["dist-tags"]?.latest;
     if (!latest) throw new Error(`${tool.name} npm package ${tool.pkg} missing latest dist-tag`);

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFile } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile, rm, readdir, lstat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -24,8 +24,10 @@ const home = os.homedir();
 const piAgentDir = path.join(home, ".pi", "agent");
 const piNpmDir = path.join(piAgentDir, "npm");
 const piSettingsPath = path.join(piAgentDir, "settings.json");
+const piExtensionsDir = path.join(piAgentDir, "extensions");
 const statePath = path.join(home, ...family.statePath.replace(/^~\//, "").split("/"));
 const stateFilePath = path.join(statePath, "installed-versions.json");
+const dirsFilePath = path.join(statePath, "installed-dirs.json");
 
 // ── Versioning ────────────────────────────────────────────────────────────
 function stripPrefix(v) { return String(v).replace(/^v/, ""); }
@@ -116,7 +118,11 @@ async function runPiInstall(tool) {
 async function readInstalledVersions() {
   const versions = {};
   for (const tool of tools) {
-    versions[tool.name] = await readPackageVersion(tool.pkg);
+    if (tool.sourceType === "github") {
+      versions[tool.name] = await readPackVersion(tool);
+    } else {
+      versions[tool.name] = await readPackageVersion(tool.pkg);
+    }
   }
   return versions;
 }
@@ -126,7 +132,124 @@ async function writeStateFile(versions) {
   await writeFile(stateFilePath, JSON.stringify(versions, null, 2) + "\n", "utf8");
 }
 
+// ── GitHub-source packs (sourceType: "github") ───────────────────────────
+// A pack is a git repo whose <extensionRoot> holds extension entries
+// (directories and/or top-level .ts files). We clone the pinned tag and copy
+// entries into ~/.pi/agent/extensions/. Only entries recorded in our own
+// state file are ever swept — untracked files/dirs are user property and are
+// never touched (mirrors the paseo_skills untracked-safety rule).
+
+async function readDirsState() {
+  try {
+    return JSON.parse(await readFile(dirsFilePath, "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+async function writeDirsState(dirs) {
+  await mkdir(statePath, { recursive: true });
+  await writeFile(dirsFilePath, JSON.stringify(dirs, null, 2) + "\n", "utf8");
+}
+
+async function packEntriesPresent(entries) {
+  for (const entry of entries) {
+    try {
+      await lstat(path.join(piExtensionsDir, entry));
+    } catch {
+      return false;
+    }
+  }
+  return true;
+}
+
+async function readPackVersion(tool) {
+  const dirs = await readDirsState();
+  const entries = dirs[tool.name];
+  if (!Array.isArray(entries) || entries.length === 0) return null;
+  if (!(await packEntriesPresent(entries))) return null;
+  // Raw state-file read, NOT readInstalledVersions(): that helper calls
+  // readPackVersion for github tools — calling it back from here is infinite
+  // mutual recursion once the pack is installed (2026-09-04 hang: first init
+  // succeeds, every later init/status/compare spins forever).
+  try {
+    const raw = JSON.parse(await readFile(stateFilePath, "utf8"));
+    return raw[tool.name] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+
+async function installGithubPack(tool) {
+  const extensionRoot = tool.extensionRoot ?? "extensions";
+  console.log(`[install] cloning ${tool.repo} at ${tool.version} (pi extension pack)...`);
+  const tmpDir = path.join(statePath, `clone-${Date.now()}`);
+  await rm(tmpDir, { recursive: true, force: true });
+  await mkdir(tmpDir, { recursive: true });
+  let entries;
+  try {
+    await execFileAsync("git", [
+      "clone", "--depth", "1", "--branch", tool.version,
+      `https://github.com/${tool.repo}.git`, tmpDir,
+    ], {
+      cwd: statePath,
+      env: { ...process.env, HOME: home },
+      maxBuffer: 10 * 1024 * 1024,
+      timeout: 120_000,
+    });
+    const rootDir = path.join(tmpDir, extensionRoot);
+    entries = (await readdir(rootDir, { withFileTypes: true }))
+      // v2-layout guard (2026-09-04 incident): loader scans level-1 *.ts AND
+      // */index.ts — *.test.ts at level 1 kills pi ("bun:test" not found), and
+      // `cp -a src dst` with existing dst nests dirs (x/x/). Only directories
+      // ride the pack; a flat .ts must be named in tool.entryFiles if ever
+      // needed. Entries install by rm-then-cp so reruns never nest.
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name)
+      .sort();
+    if (entries.length === 0) {
+      throw new Error(`${tool.repo}@${tool.version} has no entries under ${extensionRoot}/`);
+    }
+    await mkdir(piExtensionsDir, { recursive: true });
+    for (const entry of entries) {
+      const dst = path.join(piExtensionsDir, entry);
+      await rm(dst, { recursive: true, force: true });
+      await execFileAsync("cp", ["-a", path.join(rootDir, entry), dst], {
+        cwd: tmpDir,
+        env: { ...process.env, HOME: home },
+        timeout: 60_000,
+      });
+    }
+    // Production installs carry no test files (any depth) and no E2E junk.
+    await execFileAsync("find", [piExtensionsDir, "-name", "*.test.ts", "-delete"], { timeout: 30_000 });
+    await execFileAsync("find", [piExtensionsDir, "-name", ".tmp-*", "-exec", "rm", "-rf", "{}", "+"], { timeout: 30_000 });
+  } finally {
+    await rm(tmpDir, { recursive: true, force: true });
+  }
+
+  // Sweep: entries installed by a PREVIOUS tag of this pack but absent from
+  // the new one (renamed/removed extension). Recorded-only, never untracked.
+  const dirs = await readDirsState();
+  const previous = Array.isArray(dirs[tool.name]) ? dirs[tool.name] : [];
+  for (const gone of previous.filter((e) => !entries.includes(e))) {
+    console.log(`[sweep] removing ${gone} (absent from ${tool.version})`);
+    await rm(path.join(piExtensionsDir, gone), { recursive: true, force: true });
+  }
+
+  dirs[tool.name] = entries;
+  await writeDirsState(dirs);
+
+  const versions = await readInstalledVersions();
+  versions[tool.name] = tool.version;
+  await writeStateFile(versions);
+}
+
 // ── Row helpers ───────────────────────────────────────────────────────────
+async function installedVersionFor(tool) {
+  return tool.sourceType === "github" ? readPackVersion(tool) : readPackageVersion(tool.pkg);
+}
+
 function rowForTool(tool, installed) {
   const desired = tool.version;
   const state = compareState(installed, desired);
@@ -135,7 +258,7 @@ function rowForTool(tool, installed) {
     tool: tool.name,
     desired,
     actual: installed,
-    path: path.join(piNpmDir, "node_modules", tool.pkg),
+    path: tool.sourceType === "github" ? piExtensionsDir : path.join(piNpmDir, "node_modules", tool.pkg),
     state,
     action: actionForState(comparePolicy, state),
     diagnostic: diagnosticForState(state, "pi-extension"),
@@ -149,6 +272,20 @@ async function runInstall() {
   let installedAny = false;
 
   for (const tool of tools) {
+    if (tool.sourceType === "github") {
+      const installed = await readPackVersion(tool);
+      const state = compareState(installed, tool.version);
+      if (state === "higher") {
+        console.warn(`[warn] ${tool.name} ${installed} higher than pinned ${tool.version}; skip downgrade`);
+        continue;
+      }
+      if (state === "equal") {
+        continue;
+      }
+      await installGithubPack(tool);
+      installedAny = true;
+      continue;
+    }
     const installed = await readPackageVersion(tool.pkg);
     const state = compareState(installed, tool.version);
     if (state === "higher") {
@@ -179,15 +316,13 @@ async function runInstall() {
 
 async function runStatus() {
   for (const tool of tools) {
-    const installed = await readPackageVersion(tool.pkg);
-    printStatusRow(rowForTool(tool, installed));
+    printStatusRow(rowForTool(tool, await installedVersionFor(tool)));
   }
 }
 
 async function runCompare() {
   for (const tool of tools) {
-    const installed = await readPackageVersion(tool.pkg);
-    printCompareRow(rowForTool(tool, installed));
+    printCompareRow(rowForTool(tool, await installedVersionFor(tool)));
   }
 }
 

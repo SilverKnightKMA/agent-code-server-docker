@@ -60,6 +60,18 @@ for (const familyName of ["gh", "release_binaries"]) {
   }
 }
 
+for (const tool of manifest.families.pi_extensions.tools) {
+  if (tool.sourceType === "github") {
+    if (!tool.repo) throw new Error(`pi_extensions/${tool.name} missing repo`);
+    if (!tool.extensionRoot) throw new Error(`pi_extensions/${tool.name} missing extensionRoot`);
+    if (!String(tool.version).startsWith("v")) {
+      throw new Error(`pi_extensions/${tool.name} github packs pin tags with the v-prefix`);
+    }
+  } else if (!tool.pkg) {
+    throw new Error(`pi_extensions/${tool.name} missing pkg (or set sourceType: "github")`);
+  }
+}
+
 for (const tool of manifest.families.paseo_skills.tools) {
   if (!tool.source) throw new Error(`paseo_skills/${tool.name} missing source`);
   if (!tool.repo) throw new Error(`paseo_skills/${tool.name} missing repo`);

@@ -3,100 +3,105 @@ services:
     image: ghcr.io/silverknightkma/agent-code-server:latest
     container_name: agent-code-server
     init: true
+    # Matches the image default (Dockerfile USER root); the entrypoint drops
+    # to DOCKER_USER via gosu after setting up mounts and DinD.
+    user: root
     mem_limit: 8g
     ports:
       - "8880:8080"
-      - "6767:6767"
-      # - "8411:8411"  # Paseo relay server (enable with ENABLE_PASEO_RELAY=true)
+      # Paseo daemon API/UI: published on 6768 because 6767 is taken on the host.
+      - "6768:6767"
+      # Paseo relay (active with ENABLE_PASEO_RELAY=true below).
+      - "8411:8411"
+      # Publish range for containers started inside the nested DinD daemon.
+      - "30000-30100:30000-30100"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
       DOCKER_USER: "${USER:-coder}"
-      AGENT_CODE_SERVER_CONFIG_SOURCE: auto
-      AGENT_CODE_SERVER_CONFIG_CACHE_DIR: /home/coder/.local/state/agent-code-server/config
-      NPM_CONFIG_CACHE: /home/coder/.npm
-      AGENT_CODE_SERVER_TMPDIR: /home/coder/.local/state/agent-code-server/tmp
-      # AGENT_CODE_SERVER_AUTOINSTALL: "true"  # install managed tools and required Paseo skills on startup
+      TMPDIR: /home/coder/.local/state/agent-code-server/tmp
+      ENABLE_DIND: "true"
+      AGENT_CODE_SERVER_TMUX_PERSIST: "true"
+      AGENT_CODE_SERVER_AUTOINSTALL: "true"
+      ENABLE_PASEO_RELAY: "true"
+      # Keep real secrets out of git: put these in the host .env instead.
+      SUDO_PASSWORD: "${SUDO_PASSWORD:-change-me}"
       # UI_PASSWORD: change-me
-      # SUDO_PASSWORD: change-me
-
-      # Paseo (agent orchestration daemon + web UI, baked in alongside code-server)
       # PASEO_PASSWORD: change-me
-      # PASEO_HOSTNAMES: paseo.example.com
-      # ENABLE_PASEO_RELAY: "true"      # Start self-hosted relay on port 8411
-      # RELAY_ADDR: ":8411"             # Configure daemon via ~/.paseo/config.json relay.endpoint
       # ANTHROPIC_API_KEY: change-me
       # OPENAI_API_KEY: change-me
-
-      # Docker-in-Docker. Uncomment these blocks to enable:
-      # ENABLE_DIND: "true"
-      # (also uncomment privileged, security_opt, and /var/lib/docker volumes below)
-      #
-      # With ENABLE_DIND=true a dnsmasq forwarder is auto-started so containers
-      # spawned by the nested daemon can resolve outer container names (siblings
-      # on the host network) and the host's search-domain names. The forwarder
-      # listens on the DinD docker0 gateway and forwards to 127.0.0.11 (the
-      # outer daemon's embedded DNS). Set DIND_DNS=false to disable.
-
     restart: unless-stopped
     volumes:
-      # === Workspace ===
-      - ./data/workspaces:/home/coder/workspaces
+      # All state lives under a DOCKER_DATA root shared by several stacks.
+      # Set DOCKER_DATA in the host .env (falls back to ./data).
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/workspaces:/home/coder/workspaces
+
+      # Sibling stack sharing the same DOCKER_DATA root.
+      - ${DOCKER_DATA:-./data}/openchamber/workspaces:/home/coder/openchamber-workspaces
 
       # === Auth & identity ===
-      - ./data/ssh:/home/coder/.ssh
-      - ./data/config/git:/home/coder/.config/git
-      - ./data/config/gh:/home/coder/.config/gh
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/ssh:/home/coder/.ssh
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/config/git:/home/coder/.config/git
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/config/gh:/home/coder/.config/gh
 
       # === Dedicated code-server state ===
-      - ./data/config/code-server:/home/coder/.config/code-server
-      - ./data/code-server-data:/home/coder/.local/share/code-server
-      - ./data/code-server-cache:/home/coder/.cache/code-server
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/config/code-server:/home/coder/.config/code-server
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/code-server-data:/home/coder/.local/share/code-server
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/code-server-cache:/home/coder/.cache/code-server
 
       # === Managed / custom mounted tools (Tier 2 + 3) ===
-      - ./data/npm-global:/home/coder/.npm-global
-      - ./data/bun:/home/coder/.bun
-      - ./data/local-bin:/home/coder/.local/bin
-      - ./data/local-go:/home/coder/.local/go
-      - ./data/local-pip:/home/coder/.local/pip
-      - ./data/cargo:/home/coder/.cargo
-      - ./data/rustup:/home/coder/.rustup
-      - ./data/go:/home/coder/.go
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/npm-global:/home/coder/.npm-global
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/bun:/home/coder/.bun
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/local-bin:/home/coder/.local/bin
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/local-go:/home/coder/.local/go
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/local-pip:/home/coder/.local/pip
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/cargo:/home/coder/.cargo
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/rustup:/home/coder/.rustup
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/go:/home/coder/.go
+
+      # Optional: persist the npm download cache (~/.npm) so managed-tools
+      # bootstrap does not re-download every package after a container
+      # recreate. Uncomment here AND add the same line to the deployed
+      # compose to start using it.
+      # - ${DOCKER_DATA:-./data}/agent-code-server/data/npm-cache:/home/coder/.npm
 
       # === Managed runtime state ===
-      - ./data/agent-code-server-cache:/home/coder/.local/state/agent-code-server
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/agent-code-server-cache:/home/coder/.local/state/agent-code-server
 
       # === Paseo daemon state + agent credentials ===
       # Each agent CLI keeps its own config/credentials dir; check upstream
       # source before assuming a new agent follows one of these conventions.
-      - ./data/paseo:/home/coder/.paseo
-      - ./data/config/claude:/home/coder/.claude
-      - ./data/config/codex:/home/coder/.codex
-      - ./data/pi:/home/coder/.pi
-      - ./data/omp:/home/coder/.omp
-      - ./data/factory:/home/coder/.factory
-      - ./data/opencode:/home/coder/.local/share/opencode
-      - ./data/config/opencode:/home/coder/.config/opencode
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/paseo:/home/coder/.paseo
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/config/claude:/home/coder/.claude
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/config/codex:/home/coder/.codex
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/pi:/home/coder/.pi
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/omp:/home/coder/.omp
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/factory:/home/coder/.factory
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/opencode:/home/coder/.local/share/opencode
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/config/opencode:/home/coder/.config/opencode
 
-      # === Optional tmux persistence (uncomment when AGENT_CODE_SERVER_TMUX_PERSIST=true) ===
-      # - ./data/tmux-state:/home/coder/.local/state/tmux
+      # === tmux persistence (active with AGENT_CODE_SERVER_TMUX_PERSIST=true) ===
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/tmux-state:/home/coder/.local/state/tmux
 
-      # === Optional startup scripts ===
-      # - ./data/entrypoint.d:/home/coder/entrypoint.d
+      # === Startup scripts ===
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/entrypoint.d:/home/coder/entrypoint.d
 
-      # === Optional Docker-in-Docker state (uncomment with ENABLE_DIND=true) ===
-      # - ./data/docker:/var/lib/docker
-      # - ./data/containerd:/var/lib/containerd
-      #
+      # === Docker-in-Docker state (active with ENABLE_DIND=true) ===
+      # Nested containers survive container recreates through these volumes.
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/docker:/var/lib/docker
+      - ${DOCKER_DATA:-./data}/agent-code-server/data/containerd:/var/lib/containerd
+
       # === Optional DinD daemon config (CIDR collision avoidance) ===
       # Mount a custom daemon.json to change the DinD bridge CIDR (bip) and
       # default-address-pools when they overlap with host networks. The
       # entrypoint merges its "dns" key into this file, so both coexist:
-      # - ./dockerd-daemon.example.json:/etc/docker/daemon.json:ro
+      # - ${DOCKER_DATA:-./data}/agent-code-server/dockerd-daemon.json:/etc/docker/daemon.json:ro
 
-    # === Optional Docker-in-Docker runtime (uncomment with ENABLE_DIND=true) ===
-    # privileged: true
-    # security_opt:
-    #   - no-new-privileges:false
+    # === Docker-in-Docker runtime (required with ENABLE_DIND=true) ===
+    privileged: true
+    security_opt:
+      - no-new-privileges:false
 
-networks: {}
+networks:
+  docker_network:
+    external: true

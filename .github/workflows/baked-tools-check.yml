@@ -180,13 +180,16 @@ jobs:
               echo "HOME: ${HOME}"
               echo "PATH: ${PATH}"
               echo "---"
-              for cmd in bun node npm tmux; do
+              for cmd in node npm tmux; do
                 loc=$(command -v "${cmd}" 2>&1) || loc="NOT_FOUND"
                 echo "command -v ${cmd}: ${loc}"
                 ver=$(if [ "${cmd}" = tmux ]; then tmux -V 2>&1; else "${cmd}" --version 2>&1; fi) || ver="FAILED($?)"
                 echo "${cmd} --version: ${ver}"
                 echo "---"
               done
+              # bun is Tier 2 (managed release binary), not baked: report only
+              loc=$(command -v bun 2>&1) || loc="NOT_FOUND (expected: managed tool)"
+              echo "command -v bun: ${loc}"
             '\'' 2>&1
           ')
           echo "${result}"
@@ -219,8 +222,8 @@ jobs:
             fi
           done
 
-          # Check commands found
-          for cmd in bun node npm tmux; do
+          # Check commands found (bun is Tier 2 managed, not baked — see note above)
+          for cmd in node npm tmux; do
             loc=$(echo "${result}" | grep -E "^command -v ${cmd}:" | head -1)
             if echo "${loc}" | grep -qv "NOT_FOUND"; then
               echo "OK: ${cmd} found in coder shell"
@@ -230,9 +233,12 @@ jobs:
             fi
           done
 
-          # Check for "env: bun: No such file or directory"
-          if echo "${result}" | grep -qi "No such file or directory\|env.*bun"; then
-            echo "FAIL: bun errors detected in coder shell output"
+          # Check the shell itself does not leak missing-interpreter noise
+          # (historically: "env: bun: No such file or directory" when omp's
+          # bun runtime was baked; bun is managed now, so only guard generic
+          # interpreter errors, not bun specifically)
+          if echo "${result}" | grep -qi "No such file or directory"; then
+            echo "FAIL: missing-file errors detected in coder shell output"
             failures=$((failures + 1))
           fi
 

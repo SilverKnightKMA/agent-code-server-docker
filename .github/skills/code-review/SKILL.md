@@ -50,3 +50,5 @@ Any sweep that deletes symlinks or files must be constrained to a provably
 broken state — e.g. delete a symlink only when `lstat` says it is a symlink
 AND its target no longer exists — never merely "absent from an expected
 list", which can remove valid user-managed entries.
+## Runtime ownership
+- `bun` is Tier 2 (managed, `release_binaries` in managed-tools/manifest.json). The image ships no bun; do not add it back to the Dockerfile or baked-tools.json. omp depends on it and works from the managed copy in ~/.local/bin.

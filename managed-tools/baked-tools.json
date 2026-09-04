@@ -45,22 +45,6 @@
       "updateImpact": "rebuild-image-required"
     },
     {
-      "name": "bun",
-      "currentVersion": "1.3.14",
-      "versionCommand": "bun --version",
-      "versionPattern": "^[0-9]+\\.[0-9]+\\.[0-9]+",
-      "installedPath": "/usr/local/bin/bun",
-      "sourceType": "base-image",
-      "sourceUrl": "https://hub.docker.com/r/oven/bun/tags",
-      "sourceDetail": "FROM oven/bun:1.3.14@sha256:... AS bun-runtime — Dependabot docker monitors FROM image tags",
-      "monitorType": "dependabot",
-      "dependabotEcosystem": "docker",
-      "updateImpact": "rebuild-image-required",
-      "triggerPaths": [
-        "Dockerfile.dockerfile"
-      ]
-    },
-    {
       "name": "fixuid",
       "currentVersion": "0.6.0",
       "installedPath": "/usr/local/bin/fixuid",
@@ -75,13 +59,13 @@
     },
     {
       "name": "docker",
-      "currentVersion": "29.5.2",
+      "currentVersion": "29.7.2",
       "versionCommand": "docker --version",
       "versionPattern": "^Docker version [0-9]+\\.[0-9]+\\.[0-9]+",
       "installedPath": "/usr/local/bin/docker",
       "sourceType": "base-image",
       "sourceUrl": "https://hub.docker.com/_/docker/tags",
-      "sourceDetail": "COPY --from=docker-dind (FROM docker:29.5.2-dind stage) — Dependabot docker monitors FROM image tags",
+      "sourceDetail": "COPY --from=docker-dind (FROM docker:29.7.2-dind stage) — Dependabot docker monitors FROM image tags",
       "monitorType": "dependabot",
       "dependabotEcosystem": "docker",
       "updateImpact": "rebuild-image-required",
@@ -91,13 +75,13 @@
     },
     {
       "name": "dockerd",
-      "currentVersion": "29.5.2",
+      "currentVersion": "29.7.2",
       "versionCommand": "dockerd --version",
       "versionPattern": "^dockerd [0-9]+\\.[0-9]+\\.[0-9]+",
       "installedPath": "/usr/local/bin/dockerd",
       "sourceType": "base-image",
       "sourceUrl": "https://hub.docker.com/_/docker/tags",
-      "sourceDetail": "COPY --from=docker-dind (FROM docker:29.5.2-dind stage) — same image as docker CLI",
+      "sourceDetail": "COPY --from=docker-dind (FROM docker:29.7.2-dind stage) — same image as docker CLI",
       "monitorType": "dependabot",
       "dependabotEcosystem": "docker",
       "updateImpact": "rebuild-image-required",

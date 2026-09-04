@@ -14,7 +14,6 @@
 # (where "code-server" is the upstream coder/code-server checkout)
 
 # ── Stage: Bun runtime ───────────────────────────────────────────────
-FROM oven/bun:1.4.0@sha256:5ff609364c049b54eb0ff560ec96319729a972078ef2c755d758f0c6ef89c2d6 AS bun-runtime
 
 # ── Stage: toolchain (builder repo artifacts) ───────────────────────
 # This stage only exists so --build-context toolchain=... can inject
@@ -115,8 +114,11 @@ ENV LANG=en_US.UTF-8
 COPY --from=code-server-builder /tmp/code-server.deb /tmp/code-server.deb
 RUN dpkg -i /tmp/code-server.deb && rm /tmp/code-server.deb
 
-# ── Bun runtime (for managed omp and user bun tooling) ───────────────
-COPY --from=bun-runtime /usr/local/bin/bun /usr/local/bin/bun
+# NOTE: bun is deliberately NOT baked into the image. It is a Tier-2
+# managed tool (managed-tools/manifest.json, family release_binaries)
+# installed into ~/.local/bin. The paseo daemon and code-server do not
+# require bun; only the omp provider does, and it works from the managed
+# copy after managed-tools:init (autoinstall or manual).
 
 # ── Node.js + npm (baked from official image) ───────────────────────
 # Pin to same version as Bun's Node for compatibility

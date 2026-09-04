@@ -104,6 +104,19 @@ async function exists(p) {
   try { await access(p); return true; } catch { return false; }
 }
 
+// Only ENOENT/ENOTDIR count as "target missing". fs.access also rejects
+// with EACCES/EPERM for targets that exist but are unreadable by this
+// process — treating those as missing would delete valid user-managed
+// symlinks.
+async function isDangling(target) {
+  try {
+    await access(target);
+    return false;
+  } catch (err) {
+    return err?.code === "ENOENT" || err?.code === "ENOTDIR";
+  }
+}
+
 
 
 async function skillsDirReady(dirPath, expected) {
@@ -170,7 +183,7 @@ async function linkSkillsIntoAgents({ force } = {}) {
     for (const entry of await readdir(agentDir)) {
       const target = path.join(agentDir, entry);
       const stat = await lstat(target).catch(() => null);
-      if (stat?.isSymbolicLink() && !(await exists(target))) {
+      if (stat?.isSymbolicLink() && (await isDangling(target))) {
         await rm(target, { force: true });
       }
     }

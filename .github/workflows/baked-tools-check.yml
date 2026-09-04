@@ -36,6 +36,51 @@ jobs:
           path: builder
           fetch-depth: 1
 
+      - name: Manifest <-> Dockerfile lockstep gate
+        run: |
+          python3 - << 'GATE'
+          import json, re, sys
+          df = open('builder/Dockerfile.dockerfile').read()
+          manifest = {t['name']: t for t in
+                      json.load(open('builder/managed-tools/baked-tools.json'))['tools']}
+          pins = {
+              'docker':      (r'FROM docker:([0-9][\w.]*)-dind', None),
+              'dockerd':     (r'FROM docker:([0-9][\w.]*)-dind', None),
+              'paseo':       (r'@getpaseo/cli@([0-9][\w.]*)', r'@getpaseo/server@([0-9][\w.]*)'),
+              'paseo-relay': (r'ARG PASEO_RELAY_VERSION=([0-9][\w.]*)', None),
+              'code-server': (r'ARG CODE_SERVER_VERSION=([0-9][\w.]*)', None),
+          }
+          failures = []
+          for tool, (rx, rx2) in pins.items():
+              if tool not in manifest:
+                  failures.append(f'{tool}: present in Dockerfile pins but missing from baked-tools.json')
+                  continue
+              want = manifest[tool]['currentVersion']
+              got = re.search(rx, df)
+              if not got:
+                  failures.append(f'{tool}: pin regex {rx!r} not found in Dockerfile')
+                  continue
+              if got.group(1) != want:
+                  failures.append(f'{tool}: Dockerfile pin {got.group(1)} != baked-tools.json {want}')
+              if rx2:
+                  got2 = re.search(rx2, df)
+                  if not got2:
+                      failures.append(f'{tool}: secondary pin regex {rx2!r} not found')
+                  elif got2.group(1) != want:
+                      failures.append(f'{tool}: secondary Dockerfile pin {got2.group(1)} != baked-tools.json {want}')
+          # mọi entry trong manifest có FROM/ARG pin ở Dockerfile phải được gate
+          known = set(pins)
+          for name in manifest:
+              src = manifest[name].get('sourceDetail','')
+              if 'FROM docker:' in src and name not in known:
+                  failures.append(f'{name}: sourceDetail claims a docker FROM pin but lockstep gate has no regex')
+          if failures:
+              print('LOCKSTEP FAIL:')
+              for f in failures: print(' -', f)
+              sys.exit(1)
+          print('Lockstep OK: all Dockerfile pins match baked-tools.json')
+          GATE
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -52,7 +97,7 @@ jobs:
       - name: Verify baked commands exist
         run: |
           failures=0
-          for cmd in code-server node npm bun docker dockerd fixuid gosu dumb-init git curl jq python3 pip tmux paseo paseo-relay; do
+          for cmd in code-server node npm docker dockerd fixuid gosu dumb-init git curl jq python3 pip tmux paseo paseo-relay; do
             result=$(docker run --rm --entrypoint /bin/bash agent-code-server:test -c "command -v ${cmd}" 2>&1) || true
             if [ -n "${result}" ]; then
               echo "OK: ${cmd} found at ${result}"
@@ -71,7 +116,7 @@ jobs:
       - name: Verify baked tool versions
         run: |
           failures=0
-          for cmd in code-server node npm bun docker dockerd git python3 tmux paseo paseo-relay; do
+          for cmd in code-server node npm docker dockerd git python3 tmux paseo paseo-relay; do
             echo "=== ${cmd} --version ==="
             version=$(docker run --rm --entrypoint /bin/bash agent-code-server:test -c "if [ \"${cmd}\" = tmux ]; then tmux -V; else ${cmd} --version; fi 2>&1" || echo "VERSION CHECK FAILED")
             echo "${version}"
@@ -135,13 +180,16 @@ jobs:
               echo "HOME: ${HOME}"
               echo "PATH: ${PATH}"
               echo "---"
-              for cmd in bun node npm tmux; do
+              for cmd in node npm tmux; do
                 loc=$(command -v "${cmd}" 2>&1) || loc="NOT_FOUND"
                 echo "command -v ${cmd}: ${loc}"
                 ver=$(if [ "${cmd}" = tmux ]; then tmux -V 2>&1; else "${cmd}" --version 2>&1; fi) || ver="FAILED($?)"
                 echo "${cmd} --version: ${ver}"
                 echo "---"
               done
+              # bun is Tier 2 (managed release binary), not baked: report only
+              loc=$(command -v bun 2>&1) || loc="NOT_FOUND (expected: managed tool)"
+              echo "command -v bun: ${loc}"
             '\'' 2>&1
           ')
           echo "${result}"
@@ -174,8 +222,8 @@ jobs:
             fi
           done
 
-          # Check commands found
-          for cmd in bun node npm tmux; do
+          # Check commands found (bun is Tier 2 managed, not baked — see note above)
+          for cmd in node npm tmux; do
             loc=$(echo "${result}" | grep -E "^command -v ${cmd}:" | head -1)
             if echo "${loc}" | grep -qv "NOT_FOUND"; then
               echo "OK: ${cmd} found in coder shell"
@@ -185,9 +233,12 @@ jobs:
             fi
           done
 
-          # Check for "env: bun: No such file or directory"
-          if echo "${result}" | grep -qi "No such file or directory\|env.*bun"; then
-            echo "FAIL: bun errors detected in coder shell output"
+          # Check the shell itself does not leak missing-interpreter noise
+          # (historically: "env: bun: No such file or directory" when omp's
+          # bun runtime was baked; bun is managed now, so only guard generic
+          # interpreter errors, not bun specifically)
+          if echo "${result}" | grep -qi "No such file or directory"; then
+            echo "FAIL: missing-file errors detected in coder shell output"
             failures=$((failures + 1))
           fi
 

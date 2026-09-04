@@ -119,6 +119,13 @@
           "name": "pi-mcp-adapter",
           "pkg": "pi-mcp-adapter",
           "version": "2.31.0"
+        },
+        {
+          "name": "silverknight-pi-extensions",
+          "sourceType": "github",
+          "repo": "SilverKnightKMA/pi-config",
+          "extensionRoot": "extensions",
+          "version": "v1.2.1"
         }
       ]
     },

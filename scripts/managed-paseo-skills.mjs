@@ -168,10 +168,15 @@ function rowForVersion(installed) {
 async function linkSkillsIntoAgents({ force } = {}) {
   if (!(await exists(canonicalSkillsDir))) return;
   const canonical = await listSkills(canonicalSkillsDir);
-  // An empty canonical dir means the clone/checkout failed halfway. Bail out
-  // instead of sweeping every agent link away as "stale".
+  // An empty canonical dir means the clone/checkout failed halfway. Never
+  // sweep or link against it — but do NOT throw: runInstall() links before
+  // installing precisely so the installer can self-heal by recloning, and an
+  // abort here would block that repair path forever.
   if (canonical.length === 0) {
-    throw new Error(`canonical skills dir is empty: ${canonicalSkillsDir}`);
+    console.warn(
+      `[warn] canonical skills dir is empty: ${canonicalSkillsDir} — skipping link; installer will re-materialize`,
+    );
+    return;
   }
   for (const agentDir of agentSkillDirs()) {
     await mkdir(agentDir, { recursive: true });

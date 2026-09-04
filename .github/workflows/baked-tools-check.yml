@@ -21,23 +21,6 @@ on:
       - .github/workflows/baked-tools-check.yml
       - .tmux.conf
       - .github/workflows/baked-tools-monitor.yml
-  push:
-    branches:
-      - main
-    paths:
-      - Dockerfile*
-      - scripts/**
-      - managed-tools/baked-tools.json
-      - bootstrap.sh
-      - package.json
-      - package-lock.json
-      - bun.lock
-      - go.mod
-      - go.sum
-      - tools.go
-      - .github/workflows/baked-tools-check.yml
-      - .tmux.conf
-      - .github/workflows/baked-tools-monitor.yml
   workflow_dispatch:
 
 jobs:

@@ -25,27 +25,6 @@ on:
       - managed-tools/manifest.json
       - managed-tools/policy.json
       - .github/workflows/managed-tools-check.yml
-  push:
-    branches:
-      - main
-    paths:
-      - package.json
-      - package-lock.json
-      - go.mod
-      - go.sum
-      - tools.go
-      - scripts/managed-npm-tools.mjs
-      - scripts/managed-go-tools.mjs
-      - scripts/managed-mounted-tools.mjs
-      - scripts/managed-paseo-skills.mjs
-      - scripts/managed-pi-extensions.mjs
-      - scripts/managed-tools-config.mjs
-      - scripts/managed-tools-output.mjs
-      - scripts/managed-tools-status.mjs
-      - scripts/validate-managed-tools.mjs
-      - managed-tools/manifest.json
-      - managed-tools/policy.json
-      - .github/workflows/managed-tools-check.yml
   schedule:
     - cron: "0 6 * * 1"
   workflow_dispatch:

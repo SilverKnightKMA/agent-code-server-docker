@@ -106,15 +106,23 @@ async function exists(p) {
 
 
 
-async function skillsDirReady(dirPath) {
+async function skillsDirReady(dirPath, expected) {
   const found = await listSkills(dirPath);
-  return CORE_SKILLS.every((name) => found.includes(name)) && found.length > 0;
+  return expected.every((name) => found.includes(name)) && found.length > 0;
 }
 
 async function skillsReady() {
-  if (!(await skillsDirReady(canonicalSkillsDir))) return false;
+  // The canonical dir is the source of truth. Core-skill sanity first: a
+  // partial/failed clone must never count as ready.
+  const canonical = await listSkills(canonicalSkillsDir);
+  if (!(CORE_SKILLS.every((name) => canonical.includes(name)) && canonical.length > 0)) {
+    return false;
+  }
+  // Full completeness: every agent dir must contain the whole canonical
+  // set (still no hardcoded names), so a partially linked agent dir
+  // triggers reinstall instead of passing as ready.
   for (const dirPath of agentSkillDirs()) {
-    if (!(await skillsDirReady(dirPath))) return false;
+    if (!(await skillsDirReady(dirPath, canonical))) return false;
   }
   return true;
 }

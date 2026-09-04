@@ -154,13 +154,15 @@ async function linkSkillsIntoAgents({ force } = {}) {
   }
   for (const agentDir of agentSkillDirs()) {
     await mkdir(agentDir, { recursive: true });
-    // Sweep first: drop agent-dir symlinks whose target skill no longer exists
-    // in canonical (renamed/removed skills). readdir + lstat — NOT listSkills —
-    // so dangling symlinks (unreadable SKILL.md) are caught too.
+    // Sweep first: remove only DANGLING symlinks — links whose target no
+    // longer exists (e.g. a skill renamed/removed in canonical leaves its old
+    // link behind). readdir + lstat so broken links (unreadable SKILL.md) are
+    // caught; exists() guards against deleting valid user-managed symlinks
+    // that simply point outside the canonical pack.
     for (const entry of await readdir(agentDir)) {
       const target = path.join(agentDir, entry);
       const stat = await lstat(target).catch(() => null);
-      if (stat?.isSymbolicLink() && !canonical.includes(entry)) {
+      if (stat?.isSymbolicLink() && !(await exists(target))) {
         await rm(target, { force: true });
       }
     }

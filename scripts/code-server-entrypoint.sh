@@ -439,6 +439,9 @@ if [ "${ENABLE_PASEO_RELAY:-false}" = "true" ]; then
 fi
 
 # ── Paseo daemon (baked Tier 1 service, runs alongside code-server) ──
+# Explicit /opt/paseo/bin path: PATH puts ~/.npm-global ahead of /opt/paseo/bin,
+# so an accidental npm -g install into the volume would shadow the baked daemon
+# (this actually happened with 0.6.1).
 if [ -z "${PASEO_PASSWORD-}" ]; then
   echo "[paseo] WARNING: PASEO_PASSWORD is not set." >&2
   echo "[paseo] The daemon accepts unauthenticated control connections from any client that can reach it." >&2
@@ -464,7 +467,7 @@ gosu "${RUN_USER}" env \
   PASEO_HOSTNAMES="${PASEO_HOSTNAMES-}" \
   CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-${RUN_HOME}/.claude}" \
   CODEX_HOME="${CODEX_HOME:-${RUN_HOME}/.codex}" \
-  paseo start --foreground --listen "${PASEO_LISTEN:-0.0.0.0:6767}" "${PASEO_WEB_UI_FLAG}" &
+  /opt/paseo/bin/paseo start --foreground --listen "${PASEO_LISTEN:-0.0.0.0:6767}" "${PASEO_WEB_UI_FLAG}" &
 
 # ── Launch code-server (with explicit env) ─────────────────────────
 echo "[entrypoint] launching code-server as ${RUN_USER}..."

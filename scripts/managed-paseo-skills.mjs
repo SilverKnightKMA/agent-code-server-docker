@@ -20,15 +20,20 @@ if (!family) throw new Error("managed-tools manifest missing paseo_skills family
 const tool = family.tools?.[0];
 if (!tool) throw new Error("managed-tools manifest paseo_skills family has no tool");
 
-const skillNames = [
-  "paseo",
-  "paseo-advisor",
-  "paseo-committee",
-  "paseo-handoff",
-  "paseo-loop",
-  "release-beta",
-  "release-stable",
-];
+// 2026-09-04: the expected skill set is derived dynamically from the canonical
+// dir (~/.agents/skills) instead of a hardcoded list. Paseo renames/adds/removes
+// skills between tags (e.g. paseo-loop -> paseo-help/paseo-plugin in v0.6.1),
+// which made every hardcoded copy drift and fail with "canonical skill missing".
+const CORE_SKILLS = ["paseo"]; // minimal sanity: a failed clone must not pass as ready
+
+async function listSkills(dirPath) {
+  if (!(await exists(dirPath))) return [];
+  const out = [];
+  for (const entry of await readdir(dirPath)) {
+    if ((await exists(path.join(dirPath, entry, "SKILL.md")))) out.push(entry);
+  }
+  return out.sort();
+}
 
 // ── Paths ─────────────────────────────────────────────────────────────────
 const home = os.homedir();
@@ -99,19 +104,40 @@ async function exists(p) {
   try { await access(p); return true; } catch { return false; }
 }
 
-
-
-async function skillsDirReady(dirPath) {
-  for (const name of skillNames) {
-    if (!(await exists(path.join(dirPath, name, "SKILL.md")))) return false;
+// Only ENOENT/ENOTDIR count as "target missing". fs.access also rejects
+// with EACCES/EPERM for targets that exist but are unreadable by this
+// process — treating those as missing would delete valid user-managed
+// symlinks.
+async function isDangling(target) {
+  try {
+    await access(target);
+    return false;
+  } catch (err) {
+    return err?.code === "ENOENT" || err?.code === "ENOTDIR";
   }
-  return true;
+}
+
+
+
+async function skillsDirReady(dirPath, expected) {
+  const found = await listSkills(dirPath);
+  return expected.every((name) => found.includes(name)) && found.length > 0;
 }
 
 async function skillsReady() {
-  if (!(await skillsDirReady(canonicalSkillsDir))) return false;
+  // The canonical dir is the source of truth. Core-skill sanity first: this
+  // guards against a fully failed/empty materialize (the common clone-death
+  // case). Tag-vs-canonical completeness beyond that is enforced by the
+  // install path and the CI cross-check, not here.
+  const canonical = await listSkills(canonicalSkillsDir);
+  if (!(CORE_SKILLS.every((name) => canonical.includes(name)) && canonical.length > 0)) {
+    return false;
+  }
+  // Full completeness: every agent dir must contain the whole canonical
+  // set (still no hardcoded names), so a partially linked agent dir
+  // triggers reinstall instead of passing as ready.
   for (const dirPath of agentSkillDirs()) {
-    if (!(await skillsDirReady(dirPath))) return false;
+    if (!(await skillsDirReady(dirPath, canonical))) return false;
   }
   return true;
 }
@@ -143,12 +169,34 @@ function rowForVersion(installed) {
 // ── Install helpers ───────────────────────────────────────────────────────
 async function linkSkillsIntoAgents({ force } = {}) {
   if (!(await exists(canonicalSkillsDir))) return;
+  const canonical = await listSkills(canonicalSkillsDir);
+  // An empty canonical dir means the clone/checkout failed halfway. Never
+  // sweep or link against it — but do NOT throw: runInstall() links before
+  // installing precisely so the installer can self-heal by recloning, and an
+  // abort here would block that repair path forever.
+  if (canonical.length === 0) {
+    console.warn(
+      `[warn] canonical skills dir is empty: ${canonicalSkillsDir} — skipping link; installer will re-materialize`,
+    );
+    return;
+  }
   for (const agentDir of agentSkillDirs()) {
     await mkdir(agentDir, { recursive: true });
-    for (const name of skillNames) {
+    // Sweep first: remove only DANGLING symlinks — links whose target no
+    // longer exists (e.g. a skill renamed/removed in canonical leaves its old
+    // link behind). readdir + lstat so broken links (unreadable SKILL.md) are
+    // caught; exists() guards against deleting valid user-managed symlinks
+    // that simply point outside the canonical pack.
+    for (const entry of await readdir(agentDir)) {
+      const target = path.join(agentDir, entry);
+      const stat = await lstat(target).catch(() => null);
+      if (stat?.isSymbolicLink() && (await isDangling(target))) {
+        await rm(target, { force: true });
+      }
+    }
+    for (const name of canonical) {
       const source = path.join(canonicalSkillsDir, name);
       const target = path.join(agentDir, name);
-      if (!(await exists(source))) throw new Error(`canonical skill missing: ${source}`);
 
       if (await exists(target)) {
         const stat = await lstat(target);

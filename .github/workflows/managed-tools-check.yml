@@ -272,7 +272,14 @@ jobs:
             failures=$((failures + 1))
           fi
           
-          paseo_skill_names="paseo paseo-advisor paseo-committee paseo-handoff paseo-loop release-beta release-stable"
+          # Derive the expected skill set from the canonical dir the installer
+          # just materialized — hardcoded lists drift when the pinned tag
+          # renames/adds/removes skills (paseo-loop era vs v0.6.1+).
+          paseo_skill_names=$(find "${HOME}/.agents/skills" -mindepth 2 -maxdepth 2 -name SKILL.md -type f -printf '%h\n' 2>/dev/null | xargs -r -n1 basename | sort || true)
+          if [ -z "${paseo_skill_names}" ]; then
+            echo "FAIL: canonical skills dir is empty"
+            failures=$((failures + 1))
+          fi
           for dir in \
             "${HOME}/.omp/agent/skills" \
             "${HOME}/.pi/agent/skills" \
@@ -309,8 +316,10 @@ jobs:
             fi
           done
 
-          missing_total=$(echo "$output" | grep -c "state=missing" 2>/dev/null || echo 0)
-          action_total=$(echo "$output" | grep -c "action=install" 2>/dev/null || echo 0)
+          # grep -c already prints 0 on no match; "|| echo 0" would append a
+          # second 0 and break the integer comparison below.
+          missing_total=$(echo "$output" | grep -c "state=missing" || true)
+          action_total=$(echo "$output" | grep -c "action=install" || true)
           if [ "${missing_total}" -gt 0 ] || [ "${action_total}" -gt 0 ]; then
             echo "FAIL: ${missing_total} missing, ${action_total} need action"
             failures=$((failures + 1))

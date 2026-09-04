@@ -275,7 +275,7 @@ jobs:
           # Derive the expected skill set from the canonical dir the installer
           # just materialized — hardcoded lists drift when the pinned tag
           # renames/adds/removes skills (paseo-loop era vs v0.6.1+).
-          paseo_skill_names=$(find "${HOME}/.agents/skills" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort || true)
+          paseo_skill_names=$(find "${HOME}/.agents/skills" -mindepth 2 -maxdepth 2 -name SKILL.md -type f -printf '%h\n' 2>/dev/null | xargs -r -n1 basename | sort || true)
           if [ -z "${paseo_skill_names}" ]; then
             echo "FAIL: canonical skills dir is empty"
             failures=$((failures + 1))

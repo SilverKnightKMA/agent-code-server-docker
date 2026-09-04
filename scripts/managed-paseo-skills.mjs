@@ -125,8 +125,10 @@ async function skillsDirReady(dirPath, expected) {
 }
 
 async function skillsReady() {
-  // The canonical dir is the source of truth. Core-skill sanity first: a
-  // partial/failed clone must never count as ready.
+  // The canonical dir is the source of truth. Core-skill sanity first: this
+  // guards against a fully failed/empty materialize (the common clone-death
+  // case). Tag-vs-canonical completeness beyond that is enforced by the
+  // install path and the CI cross-check, not here.
   const canonical = await listSkills(canonicalSkillsDir);
   if (!(CORE_SKILLS.every((name) => canonical.includes(name)) && canonical.length > 0)) {
     return false;

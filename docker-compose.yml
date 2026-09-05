@@ -18,6 +18,9 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
+      # Múi giờ hiển thị (log daemon, timestamp UI, omTimeAgo...) — host có thể
+      # override bằng TZ=... khi `docker compose up`. Mặc định giờ Việt Nam.
+      TZ: "${TZ:-Asia/Ho_Chi_Minh}"
       DOCKER_USER: "${USER:-coder}"
       TMPDIR: /home/coder/.local/state/agent-code-server/tmp
       ENABLE_DIND: "true"

@@ -162,7 +162,10 @@ jobs:
           IFS=',' read -ra checks <<< "${required_checks}"
           checks_ok=true
           failure_reason=""
-          max_attempts=18
+          # 60 × 10s = 10 min headroom: 'Install & verify managed tools' takes
+          # ~3-5 min; 18 attempts (3 min) gave up 5s before the check finished
+          # (observed on PR #104, 2026-09-05).
+          max_attempts=60
           attempt=1
 
           while true; do

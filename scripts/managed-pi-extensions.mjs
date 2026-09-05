@@ -28,6 +28,7 @@ const piExtensionsDir = path.join(piAgentDir, "extensions");
 const statePath = path.join(home, ...family.statePath.replace(/^~\//, "").split("/"));
 const stateFilePath = path.join(statePath, "installed-versions.json");
 const dirsFilePath = path.join(statePath, "installed-dirs.json");
+const piSkillsDir = path.join(piAgentDir, "skills");
 
 // ── Versioning ────────────────────────────────────────────────────────────
 function stripPrefix(v) { return String(v).replace(/^v/, ""); }
@@ -153,9 +154,13 @@ async function writeDirsState(dirs) {
 }
 
 async function packEntriesPresent(entries) {
+  return packEntriesPresentUnder(piExtensionsDir, entries);
+}
+
+async function packEntriesPresentUnder(baseDir, entries) {
   for (const entry of entries) {
     try {
-      await lstat(path.join(piExtensionsDir, entry));
+      await lstat(path.join(baseDir, entry));
     } catch {
       return false;
     }
@@ -163,11 +168,19 @@ async function packEntriesPresent(entries) {
   return true;
 }
 
+const skillsKeyFor = (tool) => `${tool.name}::skills`;
+
 async function readPackVersion(tool) {
   const dirs = await readDirsState();
   const entries = dirs[tool.name];
   if (!Array.isArray(entries) || entries.length === 0) return null;
   if (!(await packEntriesPresent(entries))) return null;
+  // Skill entries ride the same pack tag — if the pack installed skills,
+  // they must all be present too, else the pack is not whole.
+  const skillEntries = dirs[skillsKeyFor(tool)];
+  if (Array.isArray(skillEntries) && skillEntries.length > 0) {
+    if (!(await packEntriesPresentUnder(piSkillsDir, skillEntries))) return null;
+  }
   // Raw state-file read, NOT readInstalledVersions(): that helper calls
   // readPackVersion for github tools — calling it back from here is infinite
   // mutual recursion once the pack is installed (2026-09-04 hang: first init
@@ -180,7 +193,6 @@ async function readPackVersion(tool) {
   }
 }
 
-
 async function installGithubPack(tool) {
   const extensionRoot = tool.extensionRoot ?? "extensions";
   console.log(`[install] cloning ${tool.repo} at ${tool.version} (pi extension pack)...`);
@@ -188,6 +200,7 @@ async function installGithubPack(tool) {
   await rm(tmpDir, { recursive: true, force: true });
   await mkdir(tmpDir, { recursive: true });
   let entries;
+  let skillEntries = [];
   try {
     await execFileAsync("git", [
       "clone", "--depth", "1", "--branch", tool.version,
@@ -211,15 +224,88 @@ async function installGithubPack(tool) {
     if (entries.length === 0) {
       throw new Error(`${tool.repo}@${tool.version} has no entries under ${extensionRoot}/`);
     }
+    // Optional skill root (manifest skillRoot): each dir installs to
+    // ~/.pi/agent/skills/<name> with the same rm-then-cp discipline.
+    if (tool.skillRoot) {
+      const skillRootDir = path.join(tmpDir, tool.skillRoot);
+      try {
+        skillEntries = (await readdir(skillRootDir, { withFileTypes: true }))
+          .filter((e) => e.isDirectory())
+          .map((e) => e.name)
+          .sort();
+      } catch {
+        skillEntries = [];
+      }
+    }
     await mkdir(piExtensionsDir, { recursive: true });
     for (const entry of entries) {
       const dst = path.join(piExtensionsDir, entry);
+      // Preserve a live node_modules across rm-then-cp (repo never carries it):
+      // dev containers keep their installed deps; npm install below verifies
+      // them against the freshly copied package.json.
+      const liveNm = path.join(dst, "node_modules");
+      let preservedNm = null;
+      try {
+        if ((await lstat(liveNm)).isDirectory()) {
+          preservedNm = path.join(piExtensionsDir, `.tmp-pack-nm-${entry}-${Date.now()}`);
+          await execFileAsync("mv", [liveNm, preservedNm], { timeout: 60_000 });
+        }
+      } catch {
+        // no live node_modules — nothing to preserve
+      }
       await rm(dst, { recursive: true, force: true });
       await execFileAsync("cp", ["-a", path.join(rootDir, entry), dst], {
         cwd: tmpDir,
         env: { ...process.env, HOME: home },
         timeout: 60_000,
       });
+      if (preservedNm) {
+        await execFileAsync("mv", [preservedNm, liveNm], { timeout: 60_000 });
+      }
+      // Flat-file collision guard: a legacy root-level <entry>.ts would
+      // double-load against <entry>/ and crash pi with a tool/command
+      // conflict (md-log.ts -> md-log/ migration, 2026-09-05).
+      const flatFile = `${dst}.ts`;
+      try {
+        await lstat(flatFile);
+        await rm(flatFile, { force: true });
+        console.log(`[sweep] removed flat ${entry}.ts (collides with dir ${entry}/)`);
+      } catch {
+        // absent — nothing to do
+      }
+      // Runtime deps: entries carrying package.json with dependencies get
+      // npm install'd (own pinned postinstall scripts included — puppeteer
+      // browser download for mermaid-cli). Preserved node_modules make this
+      // a fast verify; fresh containers pay the one-time download.
+      try {
+        const pkgJson = JSON.parse(await readFile(path.join(dst, "package.json"), "utf8"));
+        if (pkgJson.dependencies && Object.keys(pkgJson.dependencies).length > 0) {
+          console.log(`[install] ${entry}: npm install (runtime deps)`);
+          await execFileAsync("npm", [
+            "install", "--prefix", dst, "--no-audit", "--no-fund",
+          ], {
+            cwd: dst,
+            env: { ...process.env, HOME: home },
+            maxBuffer: 10 * 1024 * 1024,
+            timeout: 600_000,
+          });
+        }
+      } catch (err) {
+        console.warn(`[warn] ${entry}: npm install failed — ${err.message}`);
+      }
+    }
+    if (skillEntries.length > 0) {
+      await mkdir(piSkillsDir, { recursive: true });
+      for (const entry of skillEntries) {
+        const dst = path.join(piSkillsDir, entry);
+        await rm(dst, { recursive: true, force: true });
+        await execFileAsync("cp", ["-a", path.join(tmpDir, tool.skillRoot, entry), dst], {
+          cwd: tmpDir,
+          env: { ...process.env, HOME: home },
+          timeout: 60_000,
+        });
+        console.log(`[install] skills/${entry}/`);
+      }
     }
     // Production installs carry no test files (any depth) and no E2E junk.
     await execFileAsync("find", [piExtensionsDir, "-name", "*.test.ts", "-delete"], { timeout: 30_000 });
@@ -229,15 +315,27 @@ async function installGithubPack(tool) {
   }
 
   // Sweep: entries installed by a PREVIOUS tag of this pack but absent from
-  // the new one (renamed/removed extension). Recorded-only, never untracked.
+  // the new one (renamed/removed extension/skill). Recorded-only, never
+  // untracked (mirrors the paseo_skills untracked-safety rule).
   const dirs = await readDirsState();
   const previous = Array.isArray(dirs[tool.name]) ? dirs[tool.name] : [];
   for (const gone of previous.filter((e) => !entries.includes(e))) {
     console.log(`[sweep] removing ${gone} (absent from ${tool.version})`);
     await rm(path.join(piExtensionsDir, gone), { recursive: true, force: true });
   }
+  const skillsKey = skillsKeyFor(tool);
+  const previousSkills = Array.isArray(dirs[skillsKey]) ? dirs[skillsKey] : [];
+  for (const gone of previousSkills.filter((e) => !skillEntries.includes(e))) {
+    console.log(`[sweep] removing skills/${gone} (absent from ${tool.version})`);
+    await rm(path.join(piSkillsDir, gone), { recursive: true, force: true });
+  }
 
   dirs[tool.name] = entries;
+  if (skillEntries.length > 0) {
+    dirs[skillsKey] = skillEntries;
+  } else {
+    delete dirs[skillsKey];
+  }
   await writeDirsState(dirs);
 
   const versions = await readInstalledVersions();

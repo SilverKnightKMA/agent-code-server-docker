@@ -125,7 +125,13 @@
           "sourceType": "github",
           "repo": "SilverKnightKMA/pi-config",
           "extensionRoot": "extensions",
-          "version": "v1.2.1"
+          "version": "v1.4.0",
+          "skillRoot": "skills"
+        },
+        {
+          "name": "pi-web-access",
+          "pkg": "pi-web-access",
+          "version": "0.27.0"
         }
       ]
     },
@@ -284,6 +290,26 @@
           "profile": "default"
         }
       ]
+    },
+    "paseo_plugins": {
+      "statePath": "~/.local/state/paseo-plugins",
+      "tools": [
+        {
+          "name": "silverknight-paseo-plugins",
+          "sourceType": "paseo-git",
+          "repo": "SilverKnightKMA/paseo-plugins",
+          "version": "v1.0.0",
+          "plugins": [
+            "agent-health",
+            "om-panel",
+            "om-status"
+          ]
+        }
+      ],
+      "comment": "Paseo daemon plugins installed via paseo plugin install <repo>:<id> --ref <tag>; daemon config is the state, manifest pin is the version truth",
+      "installMethod": "paseo plugin install --ref",
+      "installPath": "~/.paseo/plugins",
+      "sourceType": "managed-tools-config"
     }
   }
 }

@@ -22,6 +22,7 @@ const familyScripts = [
   "managed-mounted-tools.mjs",
   "managed-paseo-skills.mjs",
   "managed-pi-extensions.mjs",
+  "managed-paseo-plugins.mjs",
 ];
 
 function runFamily(scriptName) {

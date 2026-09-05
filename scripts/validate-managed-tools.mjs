@@ -11,6 +11,7 @@ const requiredFamilies = [
   "npm",
   "paseo_skills",
   "pi_extensions",
+  "paseo_plugins",
   "go_toolchain",
   "go_tools",
   "gh",
@@ -57,6 +58,19 @@ for (const familyName of ["gh", "release_binaries"]) {
     if (!assetPattern) throw new Error(`${familyName}/${tool.name} missing assetPattern`);
     if (!checksumPolicy) throw new Error(`${familyName}/${tool.name} missing checksumPolicy`);
     if (!checksumFormat) throw new Error(`${familyName}/${tool.name} missing checksumFormat`);
+  }
+}
+
+for (const tool of manifest.families.paseo_plugins?.tools ?? []) {
+  if (tool.sourceType !== "paseo-git") {
+    throw new Error(`paseo_plugins/${tool.name} must use sourceType "paseo-git"`);
+  }
+  if (!tool.repo) throw new Error(`paseo_plugins/${tool.name} missing repo`);
+  if (!Array.isArray(tool.plugins) || tool.plugins.length === 0) {
+    throw new Error(`paseo_plugins/${tool.name} missing plugins list`);
+  }
+  if (!String(tool.version).startsWith("v")) {
+    throw new Error(`paseo_plugins/${tool.name} pins git tags with the v-prefix`);
   }
 }
 

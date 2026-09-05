@@ -400,6 +400,17 @@ async function updatePaseoSkills(manifest) {
   return true;
 }
 
+async function updatePaseoPlugins(manifest) {
+  let changed = false;
+  for (const tool of manifest.families.paseo_plugins?.tools ?? []) {
+    const tagName = await latestTagOrRelease(tool.repo);
+    if (!tagName || tagName === tool.version) continue;
+    setVersion(tool, tagName);
+    changed = true;
+  }
+  return changed;
+}
+
 async function updatePiExtensions(manifest) {
   let changed = false;
   for (const tool of manifest.families.pi_extensions?.tools ?? []) {
@@ -424,6 +435,7 @@ let changed = false;
 changed = await updateNpmFamily(manifest) || changed;
 changed = await updatePaseoSkills(manifest) || changed;
 changed = await updatePiExtensions(manifest) || changed;
+changed = await updatePaseoPlugins(manifest) || changed;
 changed = await updateGoToolchain(manifest) || changed;
 changed = await updateGoTools(manifest) || changed;
 changed = await updateReleaseFamilies(manifest) || changed;

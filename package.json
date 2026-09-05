@@ -7,7 +7,7 @@
   "scripts": {
     "validate:managed-tools": "node scripts/validate-managed-tools.mjs",
     "update:managed-tools": "node scripts/update-managed-tools.mjs",
-    "managed-tools:init": "npm run managed-tools:npm:init && npm run managed-tools:go:init && npm run managed-tools:mounted:init && npm run managed-tools:paseo:init && npm run managed-tools:pi-ext:init",
+    "managed-tools:init": "npm run managed-tools:npm:init && npm run managed-tools:go:init && npm run managed-tools:mounted:init && npm run managed-tools:paseo:init && npm run managed-tools:pi-ext:init && npm run managed-tools:plugins:init",
     "managed-tools:status": "node scripts/managed-tools-status.mjs status",
     "managed-tools:report": "node scripts/managed-tools-status.mjs report",
     "managed-tools:compare": "node scripts/managed-tools-status.mjs compare",
@@ -26,7 +26,10 @@
     "managed-tools:pi-ext:init": "node scripts/managed-pi-extensions.mjs init",
     "managed-tools:pi-ext:status": "node scripts/managed-pi-extensions.mjs status",
     "managed-tools:pi-ext:compare": "node scripts/managed-pi-extensions.mjs compare",
-    "update:pi-config-pin": "node scripts/update-pi-config-pin.mjs"
+    "update:pi-config-pin": "node scripts/update-pi-config-pin.mjs",
+    "managed-tools:plugins:init": "node scripts/managed-paseo-plugins.mjs init",
+    "managed-tools:plugins:status": "node scripts/managed-paseo-plugins.mjs status",
+    "managed-tools:plugins:compare": "node scripts/managed-paseo-plugins.mjs compare"
   },
   "dependencies": {
     "bash-language-server": "5.6.0",

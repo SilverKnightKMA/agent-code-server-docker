@@ -10,10 +10,10 @@ on:
     # the weekly managed-tools sweep is too slow to track it.
     - cron: "23 * * * *"
   workflow_dispatch:
-  # Fallback: GitHub hay drop cron lúc cao điểm (đã thực tế miss 10:23,
-  # 11:23, 12:23 hôm nay). Khi bump-PR merge xong thì auto-merge-pr chạy,
-  # chạy xong kích lại workflow này — nếu có tag mới sẽ mở PR tiếp theo,
-  # không có tag mới thì create-pull-request không tạo PR và chuỗi dừng.
+  # Fallback: GitHub drops cron during peak load (observed misses at 10:23,
+  # 11:23, 12:23 today). When the bump PR merges, auto-merge-pr runs, and
+  # its completion re-triggers this workflow — a new tag opens the next PR;
+  # with no new tag create-pull-request creates nothing and the chain stops.
   workflow_run:
     workflows: ["Auto Merge Automation PRs"]
     types: [completed]

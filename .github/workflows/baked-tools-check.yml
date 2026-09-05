@@ -68,7 +68,7 @@ jobs:
                       failures.append(f'{tool}: secondary pin regex {rx2!r} not found')
                   elif got2.group(1) != want:
                       failures.append(f'{tool}: secondary Dockerfile pin {got2.group(1)} != baked-tools.json {want}')
-          # mọi entry trong manifest có FROM/ARG pin ở Dockerfile phải được gate
+          # every manifest entry pinned via FROM/ARG in the Dockerfile must be gated
           known = set(pins)
           for name in manifest:
               src = manifest[name].get('sourceDetail','')

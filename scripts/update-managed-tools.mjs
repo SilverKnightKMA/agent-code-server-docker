@@ -369,14 +369,34 @@ async function updateRustup(manifest) {
   return changed;
 }
 
+function pickLatestSemverTag(tags) {
+  const names = (tags ?? []).map((tag) => tag?.name).filter((name) => /^v?\d+(\.\d+){1,3}(-[\w.]+)?$/.test(String(name)));
+  if (names.length === 0) return null;
+  return names.sort((a, b) => compareVersions(a, b)).at(-1);
+}
+
+async function latestTagOrRelease(repo) {
+  // Prefer a published GitHub Release; fall back to plain git tags (the
+  // SilverKnightKMA/pi-config pack ships annotated tags only — releases/latest
+  // 404s there and used to abort the whole weekly sweep).
+  const releaseUrl = `https://api.github.com/repos/${repo}/releases/latest`;
+  try {
+    const release = await fetchJson(releaseUrl);
+    if (release?.tag_name) return release.tag_name;
+  } catch {
+    // no releases published — resolve from the tag list below
+  }
+  const tagsUrl = `https://api.github.com/repos/${repo}/tags?per_page=100`;
+  return pickLatestSemverTag(await fetchJson(tagsUrl));
+}
+
 async function updatePaseoSkills(manifest) {
   const family = manifest.families?.paseo_skills;
   const tool = family?.tools?.[0];
   if (!tool?.repo) return false;
-  const release = await fetchJson(`https://api.github.com/repos/${tool.repo}/releases/latest`, requestHeaders(`https://api.github.com/repos/${tool.repo}/releases/latest`));
-  const tagName = release.tag_name;
+  const tagName = await latestTagOrRelease(tool.repo);
   if (!tagName || tagName === tool.version) return false;
-  setVersion(tool, tagName, { stripV: false });
+  setVersion(tool, tagName);
   return true;
 }
 
@@ -384,10 +404,9 @@ async function updatePiExtensions(manifest) {
   let changed = false;
   for (const tool of manifest.families.pi_extensions?.tools ?? []) {
     if (tool.sourceType === "github") {
-      const release = await fetchJson(`https://api.github.com/repos/${tool.repo}/releases/latest`, requestHeaders(`https://api.github.com/repos/${tool.repo}/releases/latest`));
-      const tagName = release.tag_name;
+      const tagName = await latestTagOrRelease(tool.repo);
       if (!tagName || tagName === tool.version) continue;
-      setVersion(tool, tagName, { stripV: false });
+      setVersion(tool, tagName);
       changed = true;
       continue;
     }

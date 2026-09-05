@@ -25,7 +25,8 @@
     "managed-tools:paseo:compare": "node scripts/managed-paseo-skills.mjs compare",
     "managed-tools:pi-ext:init": "node scripts/managed-pi-extensions.mjs init",
     "managed-tools:pi-ext:status": "node scripts/managed-pi-extensions.mjs status",
-    "managed-tools:pi-ext:compare": "node scripts/managed-pi-extensions.mjs compare"
+    "managed-tools:pi-ext:compare": "node scripts/managed-pi-extensions.mjs compare",
+    "update:pi-config-pin": "node scripts/update-pi-config-pin.mjs"
   },
   "dependencies": {
     "bash-language-server": "5.6.0",

@@ -6,7 +6,8 @@
  * The weekly `update:managed-tools` sweep is too slow for the pi-config tag
  * cadence (multiple tags per dev day), and its historical releases/latest call
  * 404'd on repos that publish plain git tags. This script resolves the newest
- * `v*` tag of every sourceType:"github" tool in the pi_extensions family and
+ * `v*` tag of every github-sourced tool in pi_extensions (sourceType
+ * "github") AND paseo_plugins (sourceType "paseo-git") families and
  * bumps the manifest pin when a newer tag exists. peter-evans/create-pull-
  * request turns the change into an automated PR; auto-merge-pr.yml merges it
  * as trusted bot work. Exit 0 always unless the manifest write fails.
@@ -70,11 +71,14 @@ async function latestTag(repo) {
 }
 
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
-const tools = manifest.families?.pi_extensions?.tools ?? [];
+const tools = [
+  ...(manifest.families?.pi_extensions?.tools ?? []),
+  ...(manifest.families?.paseo_plugins?.tools ?? []),
+];
 let changed = false;
 
 for (const tool of tools) {
-  if (tool.sourceType !== "github") continue;
+  if (tool.sourceType !== "github" && tool.sourceType !== "paseo-git") continue;
   const tagName = await latestTag(tool.repo);
   if (!tagName) {
     console.log(`[skip] ${tool.repo} has no v* semver tags`);

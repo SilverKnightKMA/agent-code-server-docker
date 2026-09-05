@@ -1,316 +1,331 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "comment": "Managed tool manifest for agent-code-server-docker. Pinned versions for 3-tier dev tools.",
-  "families": {
-    "npm": {
-      "comment": "npm-managed JS/TS language servers and essential coding tools, including omp",
-      "installMethod": "npm install --ignore-scripts",
-      "installPath": "~/.npm-global",
-      "statePath": "~/.npm-global/state",
-      "sourceType": "managed-tools-config",
-      "tools": [
-        {
-          "name": "pyright",
-          "pkg": "pyright",
-          "version": "1.1.413"
-        },
-        {
-          "name": "eslint",
-          "pkg": "eslint",
-          "version": "10.9.1"
-        },
-        {
-          "name": "prettier",
-          "pkg": "prettier",
-          "version": "3.9.6"
-        },
-        {
-          "name": "typescript",
-          "pkg": "typescript",
-          "version": "7.0.2"
-        },
-        {
-          "name": "typescript-language-server",
-          "pkg": "typescript-language-server",
-          "version": "6.0.0"
-        },
-        {
-          "name": "yaml-language-server",
-          "pkg": "yaml-language-server",
-          "version": "1.24.0"
-        },
-        {
-          "name": "bash-language-server",
-          "pkg": "bash-language-server",
-          "version": "5.6.0"
-        },
-        {
-          "name": "omp",
-          "pkg": "@oh-my-pi/pi-coding-agent",
-          "version": "18.0.11"
-        },
-        {
-          "name": "pi",
-          "pkg": "@earendil-works/pi-coding-agent",
-          "version": "0.84.4"
-        },
-        {
-          "name": "opencode",
-          "pkg": "opencode-ai",
-          "version": "1.18.25",
-          "needsPostinstall": true
-        },
-        {
-          "name": "claude",
-          "pkg": "@anthropic-ai/claude-code",
-          "version": "2.1.251",
-          "needsPostinstall": true
-        },
-        {
-          "name": "codex",
-          "pkg": "@openai/codex",
-          "version": "0.151.0"
-        },
-        {
-          "name": "droid",
-          "pkg": "droid",
-          "version": "0.208.2",
-          "needsPostinstall": true
-        },
-        {
-          "name": "copilot",
-          "pkg": "@github/copilot",
-          "version": "1.0.82"
-        }
-      ]
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "comment": "Managed tool manifest for agent-code-server-docker. Pinned versions for 3-tier dev tools.",
+ "families": {
+  "npm": {
+   "comment": "npm-managed JS/TS language servers and essential coding tools, including omp",
+   "installMethod": "npm install --ignore-scripts",
+   "installPath": "~/.npm-global",
+   "statePath": "~/.npm-global/state",
+   "sourceType": "managed-tools-config",
+   "tools": [
+    {
+     "name": "pyright",
+     "pkg": "pyright",
+     "version": "1.1.413"
     },
-    "paseo_skills": {
-      "comment": "Paseo skill pack materialized into managed agent skill roots under the mounted home volume",
-      "installMethod": "bootstrap.sh --paseo-skills",
-      "installPath": "~/.agents/skills",
-      "statePath": "~/.local/state/paseo-skills",
-      "sourceType": "managed-tools-config",
-      "tools": [
-        {
-          "name": "paseo-skills",
-          "version": "v0.7.2",
-          "source": "https://github.com/getpaseo/paseo.git",
-          "repo": "getpaseo/paseo",
-          "agentDirs": [
-            "~/.omp/agent/skills",
-            "~/.pi/agent/skills",
-            "~/.claude/skills",
-            "~/.codex/skills",
-            "~/.config/opencode/skills",
-            "~/.factory/skills",
-            "~/.copilot/skills"
-          ]
-        }
-      ]
+    {
+     "name": "eslint",
+     "pkg": "eslint",
+     "version": "10.9.1"
     },
-    "pi_extensions": {
-      "comment": "Pi coding agent extensions installed via pi install into ~/.pi/agent/npm",
-      "installMethod": "pi install npm:<pkg>",
-      "installPath": "~/.pi/agent/npm",
-      "statePath": "~/.local/state/pi-extensions",
-      "sourceType": "managed-tools-config",
-      "tools": [
-        {
-          "name": "pi-mcp-adapter",
-          "pkg": "pi-mcp-adapter",
-          "version": "2.31.0"
-        },
-        {
-          "name": "silverknight-pi-extensions",
-          "sourceType": "github",
-          "repo": "SilverKnightKMA/pi-config",
-          "extensionRoot": "extensions",
-          "version": "v1.4.9",
-          "skillRoot": "skills"
-        },
-        {
-          "name": "pi-web-access",
-          "pkg": "pi-web-access",
-          "version": "0.27.0"
-        }
-      ]
+    {
+     "name": "prettier",
+     "pkg": "prettier",
+     "version": "3.9.6"
     },
-    "go_toolchain": {
-      "installMethod": "release-tarball",
-      "installPath": "~/.local/go",
-      "statePath": "~/.local/state/go",
-      "sourceType": "tarball",
-      "checksumSource": "upstream-sha256-file",
-      "checksumFormat": "sha256sum",
-      "checksumUrlPattern": "https://go.dev/dl/?mode=json&include=all",
-      "tools": [
-        {
-          "name": "go",
-          "version": "1.27rc3",
-          "os": "linux",
-          "arch": "amd64",
-          "assetPattern": "go{version}.linux-amd64.tar.gz"
-        }
-      ]
+    {
+     "name": "typescript",
+     "pkg": "typescript",
+     "version": "7.0.2"
     },
-    "go_tools": {
-      "comment": "Go tools installed via go install using managed Go toolchain",
-      "installMethod": "go install pkg@version",
-      "installPath": "~/.go/bin",
-      "statePath": "~/.go/state",
-      "sourceType": "managed-tools-config",
-      "gobin": "~/.go/bin",
-      "tools": [
-        {
-          "name": "gopls",
-          "pkg": "golang.org/x/tools/gopls",
-          "version": "v0.23.0"
-        },
-        {
-          "name": "shfmt",
-          "pkg": "mvdan.cc/sh/v3/cmd/shfmt",
-          "version": "v3.14.0"
-        }
-      ]
+    {
+     "name": "typescript-language-server",
+     "pkg": "typescript-language-server",
+     "version": "6.0.0"
     },
-    "gh": {
-      "comment": "GitHub CLI as managed release binary",
-      "installMethod": "release-binary",
-      "installPath": "~/.local/bin/gh",
-      "statePath": "~/.config/gh",
-      "sourceType": "github-release-asset",
-      "checksumSource": "upstream-checksum-file",
-      "checksumFormat": "sha256sum",
-      "checksumPolicy": "requireUpstreamChecksum",
-      "tools": [
-        {
-          "name": "gh",
-          "version": "2.98.0",
-          "repo": "cli/cli",
-          "os": "linux",
-          "arch": "amd64",
-          "assetPattern": "gh_{version}_linux_amd64.tar.gz",
-          "binPath": "gh_{version}_linux_amd64/bin/gh",
-          "checksumAsset": "gh_{version}_checksums.txt",
-          "releaseTag": "v{version}",
-          "assetUrl": "https://github.com/cli/cli/releases/download/v{version}/gh_{version}_linux_amd64.tar.gz",
-          "checksumUrl": "https://github.com/cli/cli/releases/download/v{version}/gh_{version}_checksums.txt"
-        }
-      ]
+    {
+     "name": "yaml-language-server",
+     "pkg": "yaml-language-server",
+     "version": "1.24.0"
     },
-    "release_binaries": {
-      "comment": "Lightweight release binaries for everyday dev workflow",
-      "installMethod": "release-binary",
-      "installPath": "~/.local/bin",
-      "statePath": "~/.local/state/managed-release-binaries",
-      "sourceType": "github-release-asset",
-      "tools": [
-        {
-          "name": "yq",
-          "version": "4.53.6",
-          "repo": "mikefarah/yq",
-          "assetPattern": "yq_linux_amd64",
-          "checksumAsset": "checksums",
-          "checksumFormat": "yq-checksums",
-          "checksumPolicy": "requireUpstreamChecksum",
-          "releaseTag": "v{version}",
-          "assetUrl": "https://github.com/mikefarah/yq/releases/download/v{version}/yq_linux_amd64",
-          "checksumUrl": "https://github.com/mikefarah/yq/releases/download/v{version}/checksums"
-        },
-        {
-          "name": "ripgrep",
-          "version": "15.2.0",
-          "repo": "BurntSushi/ripgrep",
-          "assetPattern": "ripgrep-{version}-x86_64-unknown-linux-musl.tar.gz",
-          "checksumAsset": "ripgrep-{version}-x86_64-unknown-linux-musl.tar.gz.sha256",
-          "checksumFormat": "sha256sum",
-          "checksumPolicy": "requireUpstreamChecksum",
-          "binPath": "ripgrep-{version}-x86_64-unknown-linux-musl/rg",
-          "releaseTag": "{version}",
-          "assetUrl": "https://github.com/BurntSushi/ripgrep/releases/download/{version}/ripgrep-{version}-x86_64-unknown-linux-musl.tar.gz",
-          "checksumUrl": "https://github.com/BurntSushi/ripgrep/releases/download/{version}/ripgrep-{version}-x86_64-unknown-linux-musl.tar.gz.sha256"
-        },
-        {
-          "name": "actionlint",
-          "version": "1.7.12",
-          "repo": "rhysd/actionlint",
-          "assetPattern": "actionlint_{version}_linux_amd64.tar.gz",
-          "checksumAsset": "actionlint_{version}_checksums.txt",
-          "checksumFormat": "sha256sum",
-          "checksumPolicy": "requireUpstreamChecksum",
-          "releaseTag": "v{version}",
-          "assetUrl": "https://github.com/rhysd/actionlint/releases/download/v{version}/actionlint_{version}_linux_amd64.tar.gz",
-          "checksumUrl": "https://github.com/rhysd/actionlint/releases/download/v{version}/actionlint_{version}_checksums.txt"
-        },
-        {
-          "name": "hadolint",
-          "version": "2.14.0",
-          "repo": "hadolint/hadolint",
-          "assetPattern": "hadolint-linux-x86_64",
-          "checksumAsset": "hadolint-linux-x86_64.sha256",
-          "checksumFormat": "sha256sum",
-          "checksumPolicy": "requireUpstreamChecksum",
-          "releaseTag": "v{version}",
-          "assetUrl": "https://github.com/hadolint/hadolint/releases/download/v{version}/hadolint-linux-x86_64",
-          "checksumUrl": "https://github.com/hadolint/hadolint/releases/download/v{version}/hadolint-linux-x86_64.sha256"
-        },
-        {
-          "name": "bun",
-          "version": "1.3.14",
-          "repo": "oven-sh/bun",
-          "assetPattern": "bun-linux-x64.zip",
-          "releaseTag": "bun-v{version}",
-          "assetUrl": "https://github.com/oven-sh/bun/releases/download/bun-v{version}/bun-linux-x64.zip",
-          "binPath": "bun-linux-x64/bun",
-          "checksumAsset": "SHASUMS256.txt",
-          "checksumUrl": "https://github.com/oven-sh/bun/releases/download/bun-v{version}/SHASUMS256.txt",
-          "checksumFormat": "sha256sum",
-          "checksumPolicy": "requireUpstreamChecksum"
-        }
-      ]
+    {
+     "name": "bash-language-server",
+     "pkg": "bash-language-server",
+     "version": "5.6.0"
     },
-    "rustup": {
-      "comment": "Rust toolchain managed via rustup",
-      "installMethod": "rustup",
-      "installPath": "~/.rustup",
-      "cargoHome": "~/.cargo",
-      "statePath": "~/.rustup/state",
-      "sourceType": "rustup-toolchain",
-      "tools": [
-        {
-          "name": "rustc",
-          "version": "1.98.0",
-          "channel": "stable",
-          "profile": "default"
-        },
-        {
-          "name": "cargo",
-          "version": "1.98.0",
-          "channel": "stable",
-          "profile": "default"
-        }
-      ]
+    {
+     "name": "omp",
+     "pkg": "@oh-my-pi/pi-coding-agent",
+     "version": "18.0.11"
     },
-    "paseo_plugins": {
-      "statePath": "~/.local/state/paseo-plugins",
-      "tools": [
-        {
-          "name": "silverknight-paseo-plugins",
-          "sourceType": "paseo-git",
-          "repo": "SilverKnightKMA/paseo-plugins",
-          "version": "v1.0.24",
-          "plugins": [
-            "agent-health",
-            "om-panel",
-            "om-status",
-            "snip"
-          ]
-        }
-      ],
-      "comment": "Paseo daemon plugins installed via paseo plugin install <repo>:<id> --ref <tag>; daemon config is the state, manifest pin is the version truth",
-      "installMethod": "paseo plugin install --ref",
-      "installPath": "~/.paseo/plugins",
-      "sourceType": "managed-tools-config"
+    {
+     "name": "pi",
+     "pkg": "@earendil-works/pi-coding-agent",
+     "version": "0.84.4"
+    },
+    {
+     "name": "opencode",
+     "pkg": "opencode-ai",
+     "version": "1.18.25",
+     "needsPostinstall": true
+    },
+    {
+     "name": "claude",
+     "pkg": "@anthropic-ai/claude-code",
+     "version": "2.1.251",
+     "needsPostinstall": true
+    },
+    {
+     "name": "codex",
+     "pkg": "@openai/codex",
+     "version": "0.151.0"
+    },
+    {
+     "name": "droid",
+     "pkg": "droid",
+     "version": "0.208.2",
+     "needsPostinstall": true
+    },
+    {
+     "name": "copilot",
+     "pkg": "@github/copilot",
+     "version": "1.0.82"
     }
+   ]
+  },
+  "paseo_skills": {
+   "comment": "Paseo skill pack materialized into managed agent skill roots under the mounted home volume",
+   "installMethod": "bootstrap.sh --paseo-skills",
+   "installPath": "~/.agents/skills",
+   "statePath": "~/.local/state/paseo-skills",
+   "sourceType": "managed-tools-config",
+   "tools": [
+    {
+     "name": "paseo-skills",
+     "version": "v0.7.2",
+     "source": "https://github.com/getpaseo/paseo.git",
+     "repo": "getpaseo/paseo",
+     "agentDirs": [
+      "~/.omp/agent/skills",
+      "~/.pi/agent/skills",
+      "~/.claude/skills",
+      "~/.codex/skills",
+      "~/.config/opencode/skills",
+      "~/.factory/skills",
+      "~/.copilot/skills"
+     ],
+     "replacements": [
+      {
+       "skill": "paseo-committee",
+       "by": "committee-lanes",
+       "reason": "Replaced by the doctrine blind-lane committee owned by the pi-config pack. The canonical upstream file stays in place as the watch source.",
+       "date": "2026-09-05"
+      }
+     ],
+     "watch": [
+      {
+       "skill": "paseo-committee",
+       "sha256": "a9cd5572ca90ca7bdb9b55820d31a2811e621848dd327c2bf1c2dd34258b88e9",
+       "issueRepo": "SilverKnightKMA/agent-code-server-docker"
+      }
+     ]
+    }
+   ]
+  },
+  "pi_extensions": {
+   "comment": "Pi coding agent extensions installed via pi install into ~/.pi/agent/npm",
+   "installMethod": "pi install npm:<pkg>",
+   "installPath": "~/.pi/agent/npm",
+   "statePath": "~/.local/state/pi-extensions",
+   "sourceType": "managed-tools-config",
+   "tools": [
+    {
+     "name": "pi-mcp-adapter",
+     "pkg": "pi-mcp-adapter",
+     "version": "2.31.0"
+    },
+    {
+     "name": "silverknight-pi-extensions",
+     "sourceType": "github",
+     "repo": "SilverKnightKMA/pi-config",
+     "extensionRoot": "extensions",
+     "version": "v1.4.5",
+     "skillRoot": "skills"
+    },
+    {
+     "name": "pi-web-access",
+     "pkg": "pi-web-access",
+     "version": "0.27.0"
+    }
+   ]
+  },
+  "go_toolchain": {
+   "installMethod": "release-tarball",
+   "installPath": "~/.local/go",
+   "statePath": "~/.local/state/go",
+   "sourceType": "tarball",
+   "checksumSource": "upstream-sha256-file",
+   "checksumFormat": "sha256sum",
+   "checksumUrlPattern": "https://go.dev/dl/?mode=json&include=all",
+   "tools": [
+    {
+     "name": "go",
+     "version": "1.27rc3",
+     "os": "linux",
+     "arch": "amd64",
+     "assetPattern": "go{version}.linux-amd64.tar.gz"
+    }
+   ]
+  },
+  "go_tools": {
+   "comment": "Go tools installed via go install using managed Go toolchain",
+   "installMethod": "go install pkg@version",
+   "installPath": "~/.go/bin",
+   "statePath": "~/.go/state",
+   "sourceType": "managed-tools-config",
+   "gobin": "~/.go/bin",
+   "tools": [
+    {
+     "name": "gopls",
+     "pkg": "golang.org/x/tools/gopls",
+     "version": "v0.23.0"
+    },
+    {
+     "name": "shfmt",
+     "pkg": "mvdan.cc/sh/v3/cmd/shfmt",
+     "version": "v3.14.0"
+    }
+   ]
+  },
+  "gh": {
+   "comment": "GitHub CLI as managed release binary",
+   "installMethod": "release-binary",
+   "installPath": "~/.local/bin/gh",
+   "statePath": "~/.config/gh",
+   "sourceType": "github-release-asset",
+   "checksumSource": "upstream-checksum-file",
+   "checksumFormat": "sha256sum",
+   "checksumPolicy": "requireUpstreamChecksum",
+   "tools": [
+    {
+     "name": "gh",
+     "version": "2.98.0",
+     "repo": "cli/cli",
+     "os": "linux",
+     "arch": "amd64",
+     "assetPattern": "gh_{version}_linux_amd64.tar.gz",
+     "binPath": "gh_{version}_linux_amd64/bin/gh",
+     "checksumAsset": "gh_{version}_checksums.txt",
+     "releaseTag": "v{version}",
+     "assetUrl": "https://github.com/cli/cli/releases/download/v{version}/gh_{version}_linux_amd64.tar.gz",
+     "checksumUrl": "https://github.com/cli/cli/releases/download/v{version}/gh_{version}_checksums.txt"
+    }
+   ]
+  },
+  "release_binaries": {
+   "comment": "Lightweight release binaries for everyday dev workflow",
+   "installMethod": "release-binary",
+   "installPath": "~/.local/bin",
+   "statePath": "~/.local/state/managed-release-binaries",
+   "sourceType": "github-release-asset",
+   "tools": [
+    {
+     "name": "yq",
+     "version": "4.53.6",
+     "repo": "mikefarah/yq",
+     "assetPattern": "yq_linux_amd64",
+     "checksumAsset": "checksums",
+     "checksumFormat": "yq-checksums",
+     "checksumPolicy": "requireUpstreamChecksum",
+     "releaseTag": "v{version}",
+     "assetUrl": "https://github.com/mikefarah/yq/releases/download/v{version}/yq_linux_amd64",
+     "checksumUrl": "https://github.com/mikefarah/yq/releases/download/v{version}/checksums"
+    },
+    {
+     "name": "ripgrep",
+     "version": "15.2.0",
+     "repo": "BurntSushi/ripgrep",
+     "assetPattern": "ripgrep-{version}-x86_64-unknown-linux-musl.tar.gz",
+     "checksumAsset": "ripgrep-{version}-x86_64-unknown-linux-musl.tar.gz.sha256",
+     "checksumFormat": "sha256sum",
+     "checksumPolicy": "requireUpstreamChecksum",
+     "binPath": "ripgrep-{version}-x86_64-unknown-linux-musl/rg",
+     "releaseTag": "{version}",
+     "assetUrl": "https://github.com/BurntSushi/ripgrep/releases/download/{version}/ripgrep-{version}-x86_64-unknown-linux-musl.tar.gz",
+     "checksumUrl": "https://github.com/BurntSushi/ripgrep/releases/download/{version}/ripgrep-{version}-x86_64-unknown-linux-musl.tar.gz.sha256"
+    },
+    {
+     "name": "actionlint",
+     "version": "1.7.12",
+     "repo": "rhysd/actionlint",
+     "assetPattern": "actionlint_{version}_linux_amd64.tar.gz",
+     "checksumAsset": "actionlint_{version}_checksums.txt",
+     "checksumFormat": "sha256sum",
+     "checksumPolicy": "requireUpstreamChecksum",
+     "releaseTag": "v{version}",
+     "assetUrl": "https://github.com/rhysd/actionlint/releases/download/v{version}/actionlint_{version}_linux_amd64.tar.gz",
+     "checksumUrl": "https://github.com/rhysd/actionlint/releases/download/v{version}/actionlint_{version}_checksums.txt"
+    },
+    {
+     "name": "hadolint",
+     "version": "2.14.0",
+     "repo": "hadolint/hadolint",
+     "assetPattern": "hadolint-linux-x86_64",
+     "checksumAsset": "hadolint-linux-x86_64.sha256",
+     "checksumFormat": "sha256sum",
+     "checksumPolicy": "requireUpstreamChecksum",
+     "releaseTag": "v{version}",
+     "assetUrl": "https://github.com/hadolint/hadolint/releases/download/v{version}/hadolint-linux-x86_64",
+     "checksumUrl": "https://github.com/hadolint/hadolint/releases/download/v{version}/hadolint-linux-x86_64.sha256"
+    },
+    {
+     "name": "bun",
+     "version": "1.3.14",
+     "repo": "oven-sh/bun",
+     "assetPattern": "bun-linux-x64.zip",
+     "releaseTag": "bun-v{version}",
+     "assetUrl": "https://github.com/oven-sh/bun/releases/download/bun-v{version}/bun-linux-x64.zip",
+     "binPath": "bun-linux-x64/bun",
+     "checksumAsset": "SHASUMS256.txt",
+     "checksumUrl": "https://github.com/oven-sh/bun/releases/download/bun-v{version}/SHASUMS256.txt",
+     "checksumFormat": "sha256sum",
+     "checksumPolicy": "requireUpstreamChecksum"
+    }
+   ]
+  },
+  "rustup": {
+   "comment": "Rust toolchain managed via rustup",
+   "installMethod": "rustup",
+   "installPath": "~/.rustup",
+   "cargoHome": "~/.cargo",
+   "statePath": "~/.rustup/state",
+   "sourceType": "rustup-toolchain",
+   "tools": [
+    {
+     "name": "rustc",
+     "version": "1.98.0",
+     "channel": "stable",
+     "profile": "default"
+    },
+    {
+     "name": "cargo",
+     "version": "1.98.0",
+     "channel": "stable",
+     "profile": "default"
+    }
+   ]
+  },
+  "paseo_plugins": {
+   "statePath": "~/.local/state/paseo-plugins",
+   "tools": [
+    {
+     "name": "silverknight-paseo-plugins",
+     "sourceType": "paseo-git",
+     "repo": "SilverKnightKMA/paseo-plugins",
+     "version": "v1.0.20",
+     "plugins": [
+      "agent-health",
+      "om-panel",
+      "om-status",
+      "snip"
+     ]
+    }
+   ],
+   "comment": "Paseo daemon plugins installed via paseo plugin install <repo>:<id> --ref <tag>; daemon config is the state, manifest pin is the version truth",
+   "installMethod": "paseo plugin install --ref",
+   "installPath": "~/.paseo/plugins",
+   "sourceType": "managed-tools-config"
   }
+ }
 }

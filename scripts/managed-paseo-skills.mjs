@@ -20,6 +20,18 @@ if (!family) throw new Error("managed-tools manifest missing paseo_skills family
 const tool = family.tools?.[0];
 if (!tool) throw new Error("managed-tools manifest paseo_skills family has no tool");
 
+// Replacements: skills whose canonical copy stays (as the watch source) but
+// whose agent-dir symlinks are removed in favor of a replacement owned by
+// another pack (e.g. committee-lanes in pi-config). Declared per tool entry.
+const replacements = new Map((tool.replacements ?? []).map((r) => [r.skill, r]));
+const watchEntries = tool.watch ?? [];
+
+const sha256Of = async (file) => {
+  const { createHash } = await import("node:crypto");
+  const buf = await readFile(file);
+  return createHash("sha256").update(buf).digest("hex");
+};
+
 // 2026-09-04: the expected skill set is derived dynamically from the canonical
 // dir (~/.agents/skills) instead of a hardcoded list. Paseo renames/adds/removes
 // skills between tags (e.g. paseo-loop -> paseo-help/paseo-plugin in v0.6.1),
@@ -133,11 +145,12 @@ async function skillsReady() {
   if (!(CORE_SKILLS.every((name) => canonical.includes(name)) && canonical.length > 0)) {
     return false;
   }
-  // Full completeness: every agent dir must contain the whole canonical
-  // set (still no hardcoded names), so a partially linked agent dir
-  // triggers reinstall instead of passing as ready.
+  // Full completeness: every agent dir must contain the whole expected set
+  // (canonical minus replaced skills — replacements are owned by other packs),
+  // so a partially linked agent dir triggers reinstall instead of passing as ready.
+  const agentExpected = canonical.filter((name) => !replacements.has(name));
   for (const dirPath of agentSkillDirs()) {
-    if (!(await skillsDirReady(dirPath, canonical))) return false;
+    if (!(await skillsDirReady(dirPath, agentExpected))) return false;
   }
   return true;
 }
@@ -194,7 +207,18 @@ async function linkSkillsIntoAgents({ force } = {}) {
         await rm(target, { force: true });
       }
     }
+    // Replaced skills: remove their agent-dir entry so the replacement
+    // (installed by another pack) is the one agents see. The canonical copy
+    // stays — it is the watch source for upstream changes.
+    for (const name of replacements.keys()) {
+      const target = path.join(agentDir, name);
+      if (await exists(target)) {
+        const stat = await lstat(target).catch(() => null);
+        if (stat?.isSymbolicLink() || stat?.isFile()) await rm(target, { force: true });
+      }
+    }
     for (const name of canonical) {
+      if (replacements.has(name)) continue;
       const source = path.join(canonicalSkillsDir, name);
       const target = path.join(agentDir, name);
 
@@ -286,7 +310,55 @@ async function runInstall() {
   await writeFile(stateFilePath, `${tool.version}\n`, "utf8");
 }
 
+async function checkWatchedSkills() {
+  for (const w of watchEntries) {
+    const file = path.join(canonicalSkillsDir, w.skill, "SKILL.md");
+    if (!(await exists(file))) {
+      console.warn(`[watch] ${w.skill}: SKILL.md missing from canonical dir`);
+      continue;
+    }
+    const actual = await sha256Of(file);
+    if (actual === w.sha256) continue;
+    const issueRepo = w.issueRepo ?? "SilverKnightKMA/agent-code-server-docker";
+    const title = `upstream skill changed: ${w.skill} - update or re-pin its replacement`;
+    console.warn(`[watch] DRIFT ${w.skill}: sha256 ${actual} != pinned ${w.sha256}`);
+    const rep = replacements.get(w.skill);
+    const body = [
+      `Watched skill \`${w.skill}\` changed upstream (paseo tag \`${tool.version}\` install).`,
+      "",
+      `- pinned sha256: \`${w.sha256}\``,
+      `- actual sha256: \`${actual}\``,
+      rep
+        ? `- replaced by: \`${rep.by}\` (${rep.date}) - review whether the replacement needs the upstream update.`
+        : "- no replacement declared.",
+      "",
+      "Diff the file against the pinned version and update the pi-config replacement skill, or re-pin the sha.",
+    ].join("\n");
+    try {
+      const list = await execFileAsync(
+        "gh",
+        ["issue", "list", "-R", issueRepo, "--state", "open", "--search", `in:title "${title}"`, "--json", "number"],
+        { env: process.env },
+      );
+      const open = JSON.parse(list.stdout || "[]");
+      if (open.length === 0) {
+        await execFileAsync(
+          "gh",
+          ["issue", "create", "-R", issueRepo, "--title", title, "--body", body],
+          { env: process.env },
+        );
+        console.log(`[watch] created issue: ${title}`);
+      } else {
+        console.log(`[watch] issue already open: #${open[0].number}`);
+      }
+    } catch (err) {
+      console.warn(`[watch] gh issue step skipped (${err?.message ?? err})`);
+    }
+  }
+}
+
 async function runStatus() {
+  await checkWatchedSkills();
   printStatusRow(rowForVersion(await installedVersion()));
 }
 
@@ -300,6 +372,10 @@ if (command === "init") {
   await runStatus();
 } else if (command === "compare") {
   await runCompare();
+} else if (command === "relink") {
+  // One-shot apply of replacements/sweep without touching the pinned install.
+  await linkSkillsIntoAgents({ force: false });
+  console.log("[relink] done");
 } else {
   throw new Error(`unknown command: ${command}`);
 }

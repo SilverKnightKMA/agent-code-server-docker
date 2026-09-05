@@ -298,11 +298,12 @@
           "name": "silverknight-paseo-plugins",
           "sourceType": "paseo-git",
           "repo": "SilverKnightKMA/paseo-plugins",
-          "version": "v1.0.19",
+          "version": "v1.0.20",
           "plugins": [
             "agent-health",
             "om-panel",
-            "om-status"
+            "om-status",
+            "snip"
           ]
         }
       ],

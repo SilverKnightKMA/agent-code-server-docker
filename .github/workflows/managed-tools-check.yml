@@ -259,6 +259,15 @@ jobs:
             echo "FAIL: canonical skills dir is empty"
             failures=$((failures + 1))
           fi
+          # Replaced skills (manifest replacements[]) are intentionally NOT
+          # linked into agent dirs — subtract them from the expected set and
+          # assert their absence instead (replacement applied check).
+          replaced_skills=$(node -e '
+            const m = require("./managed-tools/manifest.json");
+            const t = m.families?.paseo_skills?.tools?.[0] ?? {};
+            const r = Array.isArray(t.replacements) ? t.replacements : [];
+            console.log(r.map(x => x.skill).filter(Boolean).join("\n"));
+          ' 2>/dev/null || true)
           for dir in \
             "${HOME}/.omp/agent/skills" \
             "${HOME}/.pi/agent/skills" \
@@ -274,6 +283,14 @@ jobs:
               continue
             fi
             for skill in $paseo_skill_names; do
+              case " ${replaced_skills} " in
+                *" $skill "*)
+                  if [ -f "$dir/$skill/SKILL.md" ]; then
+                    echo "FAIL: replaced skill $skill should not be linked in $dir"
+                    failures=$((failures + 1))
+                  fi
+                  continue ;;
+              esac
               if [ ! -f "$dir/$skill/SKILL.md" ]; then
                 echo "FAIL: missing $skill/SKILL.md in $dir"
                 failures=$((failures + 1))

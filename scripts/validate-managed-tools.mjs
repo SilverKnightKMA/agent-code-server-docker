@@ -58,6 +58,13 @@ for (const familyName of ["gh", "release_binaries"]) {
     if (!assetPattern) throw new Error(`${familyName}/${tool.name} missing assetPattern`);
     if (!checksumPolicy) throw new Error(`${familyName}/${tool.name} missing checksumPolicy`);
     if (!checksumFormat) throw new Error(`${familyName}/${tool.name} missing checksumFormat`);
+    const releaseTag = tool.releaseTag ?? family.releaseTag;
+    if (releaseTag?.includes("{version}") && !/^[0-9]/.test(String(tool.version))) {
+      throw new Error(
+        `${familyName}/${tool.name} version "${tool.version}" looks like a release tag — ` +
+        `releaseTag ${JSON.stringify(releaseTag)} must expand against a bare digit-first version`,
+      );
+    }
   }
 }
 

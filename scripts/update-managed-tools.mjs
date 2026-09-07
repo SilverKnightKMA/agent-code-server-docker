@@ -143,7 +143,12 @@ function regexFromTemplate(template) {
 }
 
 function versionFromReleaseTag(family, tool, tagName) {
-  const tagPattern = familySetting(family, tool, "tagPattern");
+  // tagPattern (family/template) takes precedence; fall back to the tool's
+  // releaseTag template so prefixed tags like "bun-v1.4.2" invert to "1.4.2"
+  // (2026-09-07 bug: stripPrefix could not remove the "bun-v" prefix and the
+  // tag name leaked verbatim into the manifest version field -> 404 SHASUMS).
+  const tagPattern = familySetting(family, tool, "tagPattern")
+    ?? familySetting(family, tool, "releaseTag");
   if (!tagPattern) return stripPrefix(tagName);
   const { regex, keys } = regexFromTemplate(tagPattern);
   const match = tagName.match(regex);

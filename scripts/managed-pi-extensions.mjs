@@ -310,6 +310,29 @@ async function installGithubPack(tool) {
     // Production installs carry no test files (any depth) and no E2E junk.
     await execFileAsync("find", [piExtensionsDir, "-name", "*.test.ts", "-delete"], { timeout: 30_000 });
     await execFileAsync("find", [piExtensionsDir, "-name", ".tmp-*", "-exec", "rm", "-rf", "{}", "+"], { timeout: 30_000 });
+
+    // Externals ride the pack (pi-config v1.4.20+): the pack pins its external
+    // npm packages in its own package.json (dependabot-tracked there) and ships
+    // scripts/install-externals.mjs to install them. The manifest no longer
+    // carries pi-mcp-adapter/pi-web-access entries — this hook is the only
+    // installer. Older tags without the script are skipped with a warning.
+    const externalsScript = path.join(tmpDir, "scripts", "install-externals.mjs");
+    try {
+      await lstat(externalsScript);
+      console.log(`[install] running pack install-externals.mjs (${tool.version})`);
+      await execFileAsync("node", [externalsScript], {
+        cwd: tmpDir,
+        env: { ...process.env, HOME: home },
+        maxBuffer: 10 * 1024 * 1024,
+        timeout: 300_000,
+      });
+    } catch (err) {
+      if (err.code === "ENOENT") {
+        console.warn(`[warn] ${tool.version} has no scripts/install-externals.mjs — skipping externals`);
+      } else {
+        throw err;
+      }
+    }
   } finally {
     await rm(tmpDir, { recursive: true, force: true });
   }

@@ -7,7 +7,7 @@ Builder-owned Docker packaging for **code-server** (VS Code in browser) plus AI 
 | Tier | Description | Examples | Setup |
 |------|-------------|----------|-------|
 | **Baked-in** | Bundled in image, always available | code-server, Paseo, Node.js, Bun, Python, Git, tmux, system tools | Image build time |
-| **Managed mounted** | Version-pinned, installed on demand into persisted volumes | omp, pi, opencode, claude, codex, droid, copilot, TypeScript LSP, ESLint, Go, Rust, gh, yq, ripgrep, Paseo skills, pi-mcp-adapter | `AGENT_CODE_SERVER_AUTOINSTALL=true` or run `npm run managed-tools:init` |
+| **Managed mounted** | Version-pinned, installed on demand into persisted volumes | omp, pi, opencode, claude, codex, droid, copilot, TypeScript LSP, ESLint, Go, Rust, gh, yq, ripgrep, Paseo skills, pi ext pack | `AGENT_CODE_SERVER_AUTOINSTALL=true` or run `npm run managed-tools:init` |
 | **Custom mounted** | User-installed via package managers | `npm install -g`, `go install`, `cargo install`, `pip install --user` | Direct commands |
 
 ## Quick start with Docker
@@ -64,7 +64,7 @@ npm run managed-tools:compare
 | release_binaries | yq, ripgrep, actionlint, hadolint | Pinned |
 | rustup | rustc, cargo | Stable channel |
 | paseo_skills | Paseo skill pack | Pinned |
-| pi_extensions | pi-mcp-adapter | Pinned |
+| pi_extensions | silverknight-pi-extensions pack (carries pi-mcp-adapter + pi-web-access via the pack since v1.4.20) | Pinned |
 
 ## Container structure
 

@@ -239,7 +239,7 @@ jobs:
 
           failures=0
 
-          required_tools="pyright eslint prettier typescript typescript-language-server yaml-language-server bash-language-server omp pi opencode claude codex droid copilot paseo-skills pi-mcp-adapter go gopls shfmt gh yq ripgrep actionlint hadolint rustc cargo"
+          required_tools="pyright eslint prettier typescript typescript-language-server yaml-language-server bash-language-server omp pi opencode claude codex droid copilot paseo-skills silverknight-pi-extensions go gopls shfmt gh yq ripgrep actionlint hadolint rustc cargo"
           
           paseo_status=$(echo "$output" | grep -E '^status.* tool=paseo-skills( |$)')
           if [ -z "$paseo_status" ]; then
@@ -308,6 +308,21 @@ jobs:
             if ! echo "$status_line" | grep -q "state=equal"; then
               echo "FAIL: ${tool} state is not equal"
               echo "  ${status_line}"
+              failures=$((failures + 1))
+            fi
+          done
+
+          # Externals ride the pack since pi-config v1.4.20 (the manifest no
+          # longer tracks pi-mcp-adapter/pi-web-access): the pack's own
+          # install-externals.mjs must have landed them in the pi agent npm
+          # dir and registered them in pi settings.json.
+          for pkg in pi-mcp-adapter pi-web-access; do
+            if ! node -e "require(require('path').join(process.env.HOME, '.pi/agent/npm/node_modules', process.argv[1], 'package.json'))" "$pkg" >/dev/null 2>&1; then
+              echo "FAIL: pack external ${pkg} not installed under ~/.pi/agent/npm"
+              failures=$((failures + 1))
+            fi
+            if ! grep -q "\"npm:${pkg}\"" "${HOME}/.pi/agent/settings.json" 2>/dev/null; then
+              echo "FAIL: npm:${pkg} missing from pi settings.json packages"
               failures=$((failures + 1))
             fi
           done

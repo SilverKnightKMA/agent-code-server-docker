@@ -131,22 +131,12 @@
       "sourceType": "managed-tools-config",
       "tools": [
         {
-          "name": "pi-mcp-adapter",
-          "pkg": "pi-mcp-adapter",
-          "version": "2.32.1"
-        },
-        {
           "name": "silverknight-pi-extensions",
           "sourceType": "github",
           "repo": "SilverKnightKMA/pi-config",
           "extensionRoot": "extensions",
-          "version": "v1.4.19",
+          "version": "v1.4.20",
           "skillRoot": "skills"
-        },
-        {
-          "name": "pi-web-access",
-          "pkg": "pi-web-access",
-          "version": "0.28.0"
         }
       ]
     },

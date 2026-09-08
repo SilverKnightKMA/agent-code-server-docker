@@ -124,7 +124,7 @@ for arg in ${_BOOTSTRAP_ARGS:-}; do
       echo "  --omp           Install oh-my-pi (omp) via managed npm tools"
       echo "  --opencode      Install opencode-ai CLI"
       echo "  --paseo-skills  Install Paseo skills for managed agent CLIs"
-      echo "  --pi-extensions  Install Pi extensions (pi-mcp-adapter) for managed agent CLIs"
+      echo "  --pi-extensions  Install the Pi extension pack (carries externals) for managed agent CLIs"
       echo "  --all           Install everything above"
       exit 0
       ;;

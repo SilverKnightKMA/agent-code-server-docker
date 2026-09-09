@@ -47,7 +47,11 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          sudo apt-get update -qq
+          # -qq update can exit 100 when a PRE-INSTALLED third-party repo on the
+          # runner image (dl.google.com chrome-stable) serves a stale hash — a
+          # known transient mirror flake, not something this job uses. Ignore
+          # update errors; the packages below come from ubuntu main.
+          sudo apt-get update -qq || echo "apt update: mirror flake ignored (chrome-stable)"
           sudo apt-get install -y -qq --no-install-recommends \
             curl \
             ca-certificates \

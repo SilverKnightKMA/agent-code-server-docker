@@ -303,7 +303,7 @@
           "name": "silverknight-paseo-plugins",
           "sourceType": "paseo-git",
           "repo": "SilverKnightKMA/paseo-plugins",
-          "version": "v1.0.33",
+          "version": "v1.0.34",
           "plugins": [
             "agent-health",
             "om-panel",

@@ -455,6 +455,16 @@ case "${PASEO_WEB_UI_ENABLED:-true}" in
     ;;
 esac
 
+# ── Stale pid-lock guard (2026-09-12) ─────────────────────────────
+# A container recreate leaves ~/.paseo/paseo.pid behind (persisted volume).
+# Its pid belongs to the OLD pid namespace and can collide with an unrelated
+# early process in the new one (code-server children fork into the 560-620
+# range while the daemon CLI is still importing its graph). pid-lock.js then
+# refuses to start ("Another Paseo daemon is already running", exit 1 before
+# any daemon.log line — the error only reaches docker logs). A fresh
+# container can never have a live daemon: drop the lock unconditionally.
+gosu "${RUN_USER}" rm -f "${PASEO_HOME:-${RUN_HOME}/.paseo}/paseo.pid"
+
 echo "[entrypoint] starting paseo daemon on ${PASEO_LISTEN:-0.0.0.0:6767}..."
 gosu "${RUN_USER}" env \
   HOME="${RUN_HOME}" \

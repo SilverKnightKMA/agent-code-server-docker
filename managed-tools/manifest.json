@@ -12,7 +12,7 @@
         {
           "name": "pyright",
           "pkg": "pyright",
-          "version": "1.1.413"
+          "version": "1.1.414"
         },
         {
           "name": "eslint",
@@ -47,7 +47,7 @@
         {
           "name": "omp",
           "pkg": "@oh-my-pi/pi-coding-agent",
-          "version": "18.1.13"
+          "version": "18.1.21"
         },
         {
           "name": "pi",
@@ -57,24 +57,24 @@
         {
           "name": "opencode",
           "pkg": "opencode-ai",
-          "version": "1.18.29",
+          "version": "1.18.30",
           "needsPostinstall": true
         },
         {
           "name": "claude",
           "pkg": "@anthropic-ai/claude-code",
-          "version": "2.1.263",
+          "version": "2.1.270",
           "needsPostinstall": true
         },
         {
           "name": "codex",
           "pkg": "@openai/codex",
-          "version": "0.153.4"
+          "version": "0.154.0"
         },
         {
           "name": "droid",
           "pkg": "droid",
-          "version": "0.213.0",
+          "version": "0.218.2",
           "needsPostinstall": true
         },
         {
@@ -93,7 +93,7 @@
       "tools": [
         {
           "name": "paseo-skills",
-          "version": "v0.7.2",
+          "version": "v0.8.0",
           "source": "https://github.com/getpaseo/paseo.git",
           "repo": "getpaseo/paseo",
           "agentDirs": [

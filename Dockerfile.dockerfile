@@ -183,6 +183,7 @@ ENV MANAGED_RUSTUP_HOME=/home/coder/.rustup
 ENV XDG_CACHE_HOME=/home/coder/.cache
 ENV XDG_CONFIG_HOME=/home/coder/.config
 ENV XDG_DATA_HOME=/home/coder/.local/share
+ENV OM_RUNS_COST_TTL_DAYS=7
 ENV XDG_STATE_HOME=/home/coder/.local/state
 ENV AGENT_CODE_SERVER_CONFIG_CACHE_DIR=/home/coder/.local/state/agent-code-server/config
 ENV AGENT_CODE_SERVER_TMPDIR=/home/coder/.local/state/agent-code-server/tmp

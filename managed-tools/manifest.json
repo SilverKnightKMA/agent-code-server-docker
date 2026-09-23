@@ -17,12 +17,12 @@
         {
           "name": "eslint",
           "pkg": "eslint",
-          "version": "10.10.0"
+          "version": "10.11.0"
         },
         {
           "name": "prettier",
           "pkg": "prettier",
-          "version": "3.9.6"
+          "version": "3.9.8"
         },
         {
           "name": "typescript",
@@ -42,45 +42,45 @@
         {
           "name": "bash-language-server",
           "pkg": "bash-language-server",
-          "version": "5.6.0"
+          "version": "5.8.1"
         },
         {
           "name": "omp",
           "pkg": "@oh-my-pi/pi-coding-agent",
-          "version": "18.1.21"
+          "version": "18.2.7"
         },
         {
           "name": "pi",
           "pkg": "@earendil-works/pi-coding-agent",
-          "version": "0.85.1"
+          "version": "0.86.1"
         },
         {
           "name": "opencode",
           "pkg": "opencode-ai",
-          "version": "1.18.30",
+          "version": "1.18.31",
           "needsPostinstall": true
         },
         {
           "name": "claude",
           "pkg": "@anthropic-ai/claude-code",
-          "version": "2.1.270",
+          "version": "2.1.278",
           "needsPostinstall": true
         },
         {
           "name": "codex",
           "pkg": "@openai/codex",
-          "version": "0.154.0"
+          "version": "0.155.1"
         },
         {
           "name": "droid",
           "pkg": "droid",
-          "version": "0.218.2",
+          "version": "0.223.0",
           "needsPostinstall": true
         },
         {
           "name": "copilot",
           "pkg": "@github/copilot",
-          "version": "1.0.83"
+          "version": "1.0.86"
         }
       ]
     },
@@ -135,7 +135,7 @@
           "sourceType": "github",
           "repo": "SilverKnightKMA/pi-config",
           "extensionRoot": "extensions",
-          "version": "v1.4.101",
+          "version": "v1.4.142",
           "skillRoot": "skills"
         }
       ]
@@ -190,7 +190,7 @@
       "tools": [
         {
           "name": "gh",
-          "version": "2.100.0",
+          "version": "2.101.0",
           "repo": "cli/cli",
           "os": "linux",
           "arch": "amd64",
@@ -303,7 +303,7 @@
           "name": "silverknight-paseo-plugins",
           "sourceType": "paseo-git",
           "repo": "SilverKnightKMA/paseo-plugins",
-          "version": "v1.0.66",
+          "version": "v1.0.97",
           "plugins": [
             "agent-health",
             "om-panel",

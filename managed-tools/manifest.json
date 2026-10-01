@@ -22,7 +22,7 @@
         {
           "name": "prettier",
           "pkg": "prettier",
-          "version": "3.9.8"
+          "version": "3.9.9"
         },
         {
           "name": "typescript",
@@ -32,7 +32,7 @@
         {
           "name": "typescript-language-server",
           "pkg": "typescript-language-server",
-          "version": "6.0.0"
+          "version": "6.0.1"
         },
         {
           "name": "yaml-language-server",
@@ -47,40 +47,40 @@
         {
           "name": "omp",
           "pkg": "@oh-my-pi/pi-coding-agent",
-          "version": "18.2.7"
+          "version": "18.4.1"
         },
         {
           "name": "pi",
           "pkg": "@earendil-works/pi-coding-agent",
-          "version": "0.86.1"
+          "version": "0.87.1"
         },
         {
           "name": "opencode",
           "pkg": "opencode-ai",
-          "version": "1.18.31",
+          "version": "1.18.33",
           "needsPostinstall": true
         },
         {
           "name": "claude",
           "pkg": "@anthropic-ai/claude-code",
-          "version": "2.1.278",
+          "version": "2.1.283",
           "needsPostinstall": true
         },
         {
           "name": "codex",
           "pkg": "@openai/codex",
-          "version": "0.155.1"
+          "version": "0.158.0"
         },
         {
           "name": "droid",
           "pkg": "droid",
-          "version": "0.223.0",
+          "version": "0.228.0",
           "needsPostinstall": true
         },
         {
           "name": "copilot",
           "pkg": "@github/copilot",
-          "version": "1.0.86"
+          "version": "1.0.88"
         }
       ]
     },
@@ -93,7 +93,7 @@
       "tools": [
         {
           "name": "paseo-skills",
-          "version": "v0.8.0",
+          "version": "v0.9.2",
           "source": "https://github.com/getpaseo/paseo.git",
           "repo": "getpaseo/paseo",
           "agentDirs": [

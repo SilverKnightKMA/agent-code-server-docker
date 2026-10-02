@@ -448,12 +448,10 @@ if [ -z "${PASEO_PASSWORD-}" ]; then
   echo "[paseo] Set PASEO_PASSWORD for any published port or network-reachable deployment." >&2
 fi
 
-PASEO_WEB_UI_FLAG="--web-ui"
-case "${PASEO_WEB_UI_ENABLED:-true}" in
-  false|0|no)
-    PASEO_WEB_UI_FLAG="--no-web-ui"
-    ;;
-esac
+# Web UI toggle is env-driven on paseo >= 0.10 (PASEO_WEB_UI_ENABLED, passed
+# in the daemon env block below; verified 2026-10-02: true -> "web UI mounted").
+# The old --web-ui/--no-web-ui start flags were removed together with
+# --foreground/--listen (see the daemon start block below).
 
 # ── Stale pid-lock guard (2026-09-12) ─────────────────────────────
 # A container recreate leaves ~/.paseo/paseo.pid behind (persisted volume).
@@ -465,6 +463,23 @@ esac
 # container can never have a live daemon: drop the lock unconditionally.
 gosu "${RUN_USER}" rm -f "${PASEO_HOME:-${RUN_HOME}/.paseo}/paseo.pid"
 
+# ── Paseo daemon start (paseo >= 0.10 contract, verified 2026-10-02 on 0.10.2) ──
+# `paseo start --foreground --listen <v>` died at boot since 0.10.x: BOTH flags
+# were removed (exit 1 before any daemon starts — a fresh boot had NO daemon
+# until a human hand-started it; that is exactly the 2026-10-02 outage).
+#
+# Replacement: `paseo daemon run` — foreground supervisor with deployment
+# environment overrides. daemon.listen ownership (verified with isolated
+# homes on ports 16994-16997):
+#   1. PASEO_LISTEN set (this entrypoint defaults it to 0.0.0.0:6767)
+#      -> env WINS each boot, even over config.json (16994 beat 16995)
+#      -> a white volume therefore boots reachable out of the box
+#   2. PASEO_LISTEN explicitly emptied in compose
+#      -> config.json owns it (~/.paseo/config.json daemon.listen;
+#         `paseo daemon config set daemon.listen <v>` or the UI)
+#   3. neither env nor config -> paseo default is 127.0.0.1:6767, which is
+#      unreachable through a published port (docker DNAT enters via eth0,
+#      not loopback) — that is why tier 1 stays the default here.
 echo "[entrypoint] starting paseo daemon on ${PASEO_LISTEN:-0.0.0.0:6767}..."
 gosu "${RUN_USER}" env \
   HOME="${RUN_HOME}" \
@@ -477,7 +492,7 @@ gosu "${RUN_USER}" env \
   PASEO_HOSTNAMES="${PASEO_HOSTNAMES-}" \
   CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-${RUN_HOME}/.claude}" \
   CODEX_HOME="${CODEX_HOME:-${RUN_HOME}/.codex}" \
-  /opt/paseo/bin/paseo start --foreground --listen "${PASEO_LISTEN:-0.0.0.0:6767}" "${PASEO_WEB_UI_FLAG}" &
+  /opt/paseo/bin/paseo daemon run --home "${PASEO_HOME:-${RUN_HOME}/.paseo}" &
 
 # ── Launch code-server (with explicit env) ─────────────────────────
 echo "[entrypoint] launching code-server as ${RUN_USER}..."

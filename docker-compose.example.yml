@@ -26,6 +26,10 @@ services:
       # Paseo (agent orchestration daemon + web UI, baked in alongside code-server)
       # PASEO_PASSWORD: change-me
       # PASEO_HOSTNAMES: paseo.example.com
+      # Daemon bind ownership (paseo >= 0.10): set -> env wins every boot;
+      # unset -> config.json owns it; unset + no config -> entrypoint
+      # defaults 0.0.0.0:6767 so a fresh volume is reachable through ports:.
+      # PASEO_LISTEN: "0.0.0.0:6767"
       # ANTHROPIC_API_KEY: change-me
       # OPENAI_API_KEY: change-me
 

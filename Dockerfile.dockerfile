@@ -29,7 +29,7 @@ COPY vendor/tmux-resurrect /opt/agent-code-server/managed-tools/vendor/tmux-resu
 COPY vendor/tmux-continuum /opt/agent-code-server/managed-tools/vendor/tmux-continuum
 
 # ── Stage: code-server build ────────────────────────────────────────
-FROM debian:13-slim@sha256:d7e12182ce18b85b93007c1dedf31f2d29e01ccf3182cc4017c709b6259bc132 AS code-server-builder
+FROM debian:13-slim@sha256:a99cfc517144bc59b1978475ec53b46ecabec7e43635402ee5b77cc54cd1b20a AS code-server-builder
 
 # We copy code-server from the official release .deb rather than building
 # from source. This stage pins the exact version and architecture.
@@ -58,7 +58,7 @@ RUN mkdir /relay \
      | tar xzf - -C /relay
 
 # ── Stage: runtime ──────────────────────────────────────────────────
-FROM debian:13-slim@sha256:d7e12182ce18b85b93007c1dedf31f2d29e01ccf3182cc4017c709b6259bc132 AS runtime
+FROM debian:13-slim@sha256:a99cfc517144bc59b1978475ec53b46ecabec7e43635402ee5b77cc54cd1b20a AS runtime
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -130,8 +130,8 @@ RUN curl -fsSL https://nodejs.org/dist/v24.16.0/node-v24.16.0-linux-x64.tar.xz \
 # shadowed by the Tier 2/3 bind-mounted volumes. Agent CLIs (Tier 2) are
 # intentionally NOT baked here — see managed-tools/manifest.json.
 RUN ONNXRUNTIME_NODE_INSTALL=skip npm install -g --prefix /opt/paseo \
-      @getpaseo/cli@0.8.0 \
-      @getpaseo/server@0.8.0 \
+      @getpaseo/cli@0.10.2 \
+      @getpaseo/server@0.10.2 \
     && npm cache clean --force
 
 # ── User setup ──────────────────────────────────────────────────────

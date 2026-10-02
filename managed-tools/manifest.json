@@ -52,7 +52,7 @@
         {
           "name": "pi",
           "pkg": "@earendil-works/pi-coding-agent",
-          "version": "0.87.1"
+          "version": "1.0.0"
         },
         {
           "name": "opencode",
@@ -135,7 +135,7 @@
           "sourceType": "github",
           "repo": "SilverKnightKMA/pi-config",
           "extensionRoot": "extensions",
-          "version": "v1.4.145",
+          "version": "v1.4.146",
           "skillRoot": "skills"
         }
       ]

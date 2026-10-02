@@ -25,6 +25,13 @@ services:
       AGENT_CODE_SERVER_TMUX_PERSIST: "true"
       AGENT_CODE_SERVER_AUTOINSTALL: "true"
       ENABLE_PASEO_RELAY: "true"
+      # Daemon bind ownership (paseo >= 0.10):
+      #   set here  -> env wins every boot, even over config.json
+      #   unset     -> ~/.paseo/config.json daemon.listen owns it
+      #   unset + no config -> entrypoint still defaults 0.0.0.0:6767
+      # (bind 0.0.0.0 inside the container is safe: exposure is governed by the
+      # ports: block below, not by the in-container bind address)
+      # PASEO_LISTEN: "0.0.0.0:6767"
       # Keep real secrets out of git: put these in the host .env instead.
       SUDO_PASSWORD: "${SUDO_PASSWORD:-change-me}"
       # UI_PASSWORD: change-me

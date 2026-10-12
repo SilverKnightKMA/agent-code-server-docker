@@ -22,7 +22,7 @@
         {
           "name": "prettier",
           "pkg": "prettier",
-          "version": "3.9.9"
+          "version": "3.9.10"
         },
         {
           "name": "typescript",
@@ -32,12 +32,12 @@
         {
           "name": "typescript-language-server",
           "pkg": "typescript-language-server",
-          "version": "6.0.1"
+          "version": "6.0.2"
         },
         {
           "name": "yaml-language-server",
           "pkg": "yaml-language-server",
-          "version": "1.24.0"
+          "version": "1.25.0"
         },
         {
           "name": "bash-language-server",
@@ -47,40 +47,40 @@
         {
           "name": "omp",
           "pkg": "@oh-my-pi/pi-coding-agent",
-          "version": "18.6.1"
+          "version": "18.10.1"
         },
         {
           "name": "pi",
           "pkg": "@earendil-works/pi-coding-agent",
-          "version": "1.0.3"
+          "version": "1.1.0"
         },
         {
           "name": "opencode",
           "pkg": "opencode-ai",
-          "version": "1.18.34",
+          "version": "1.19.0",
           "needsPostinstall": true
         },
         {
           "name": "claude",
           "pkg": "@anthropic-ai/claude-code",
-          "version": "2.1.289",
+          "version": "2.1.296",
           "needsPostinstall": true
         },
         {
           "name": "codex",
           "pkg": "@openai/codex",
-          "version": "0.160.0"
+          "version": "0.162.1"
         },
         {
           "name": "droid",
           "pkg": "droid",
-          "version": "0.233.0",
+          "version": "0.238.0",
           "needsPostinstall": true
         },
         {
           "name": "copilot",
           "pkg": "@github/copilot",
-          "version": "1.0.91"
+          "version": "1.0.95"
         }
       ]
     },
@@ -93,7 +93,7 @@
       "tools": [
         {
           "name": "paseo-skills",
-          "version": "v0.10.3",
+          "version": "v0.11.2",
           "source": "https://github.com/getpaseo/paseo.git",
           "repo": "getpaseo/paseo",
           "agentDirs": [
@@ -261,7 +261,7 @@
         },
         {
           "name": "bun",
-          "version": "1.4.2",
+          "version": "1.4.3",
           "repo": "oven-sh/bun",
           "assetPattern": "bun-linux-x64.zip",
           "releaseTag": "bun-v{version}",

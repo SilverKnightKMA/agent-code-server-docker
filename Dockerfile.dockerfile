@@ -46,7 +46,7 @@ RUN curl -fsSL "https://github.com/coder/code-server/releases/download/v${CODE_S
     -o /tmp/code-server.deb
 
 # ── Stage: Docker-in-Docker ────────────────────────────────────────
-FROM docker:29.8.1-dind@sha256:3f3c01aaaebf7cce837356b688b7c059a4749f10bd7660dec7c58fc454a283f0 AS docker-dind
+FROM docker:29.9.0-dind@sha256:0b6d18a4a222e71c88be6034926b4f6cde2fc33c2218643d03ccfddc65995470 AS docker-dind
 
 # ── Stage: Paseo relay binary ───────────────────────────────────────
 FROM alpine:3.24 AS paseo-relay-builder
